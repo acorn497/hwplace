@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model pixel {
+  PIXEL_INDEX   Int    @id @default(autoincrement())
+  PIXEL_POS_X   Int
+  PIXEL_POS_Y   Int
+  PIXEL_COLOR_R Int
+  PIXEL_COLOR_G Int
+  PIXEL_COLOR_B Int
+  PIXEL_UUID    String @db.VarChar(36) @default(uuid())
+
+  @@unique([PIXEL_POS_X, PIXEL_POS_Y], map: "unique_pixel")
+}

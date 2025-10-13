@@ -1,0 +1,602 @@
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Socket, io } from 'socket.io-client';
+import Canvas from "./components/Canvas";
+import Toolbar from "./components/Toolbar";
+import StatusPanel from "./components/StatusPanel";
+import { Pixel } from "./components/Types";
+
+// 서버 픽셀 데이터 타입
+interface ServerPixel {
+  PIXEL_INDEX: number;
+  PIXEL_POS_X: number;
+  PIXEL_POS_Y: number;
+  PIXEL_COLOR_R: number;
+  PIXEL_COLOR_G: number;
+  PIXEL_COLOR_B: number;
+  PIXEL_UUID: string;
+}
+
+// 배치 업데이트용 타입
+interface BatchPixelUpdateData {
+  pixels: {
+    x: number;
+    y: number;
+    color: { r: number; g: number; b: number };
+  }[];
+  uuid: string;
+}
+
+// 배치 응답용 타입
+interface BatchPixelUpdatedResponse {
+  pixels: {
+    x: number;
+    y: number;
+    color: { r: number; g: number; b: number };
+  }[];
+  uuid: string;
+  timestamp: string;
+}
+
+interface MessageData {
+  message: string;
+  sender: string;
+}
+
+// API 함수들
+const fetchPixelData = async (): Promise<ServerPixel[]> => {
+  try {
+    const response = await fetch('http://172.17.0.1:3000/paint');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch pixel data:', error);
+    return [];
+  }
+};
+
+const saveBatchPixels = async (pixels: { posX: number; posY: number; colorR: number; colorG: number; colorB: number }[]): Promise<ServerPixel[] | null> => {
+  try {
+    console.log(JSON.stringify(pixels))
+    const response = await fetch('http://172.17.0.1:3000/paint', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(pixels),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to save batch pixels:', error);
+    return null;
+  }
+};
+
+// UUID 생성 함수
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: string }> = ({
+  width = 500,
+  height = 500,
+}) => {
+  const [pixelSize, setPixelSize] = useState(20);
+  const [offsetX, setOffsetX] = useState(600 - (width * 20) / 2);
+  const [offsetY, setOffsetY] = useState(400 - (height * 20) / 2);
+  const [mousePixelPos, setMousePixelPos] = useState<{ x: number; y: number } | null>(null);
+  const [pinnedPositions, setPinnedPositions] = useState<{ x: number; y: number }[]>([]);
+  const [isGridActive, setIsGridActive] = useState(true);
+  const [activeTool, setActiveTool] = useState<"settings" | "brush" | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLocalStorageEnabled, setIsLocalStorageEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('gbswplace:lsEnabled');
+      return v ? JSON.parse(v) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  // Socket.IO 관련 상태
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<{ sender: string; message: string; timestamp: string }[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [lastDataLoadTime, setLastDataLoadTime] = useState<Date | null>(null);
+  const [isRenewed, setIsRenewed] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const userUUID = useRef<string>(generateUUID());
+
+  // 픽셀 데이터 초기화 (기본값: 흰색)
+  const [pixelData, setPixelData] = useState<Pixel[][]>(() =>
+    Array.from({ length: height }, () =>
+      Array.from({ length: width }, () => ({ r: 255, g: 255, b: 255 }))
+    )
+  );
+
+  const [selectedColor, setSelectedColor] = useState<Pixel>({ r: 255, g: 0, b: 0 });
+  const [favoriteColors, setFavoriteColors] = useState<Pixel[]>([]);
+  const [isPickFromCanvas, setIsPickFromCanvas] = useState(false);
+
+  // LocalStorage: load persisted states once on mount
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try {
+      const storedActiveTool = localStorage.getItem('gbswplace:activeTool');
+      if (storedActiveTool === 'settings' || storedActiveTool === 'brush' || storedActiveTool === 'null') {
+        setActiveTool(storedActiveTool === 'null' ? null : (storedActiveTool as "settings" | "brush"));
+      }
+
+      const storedGrid = localStorage.getItem('gbswplace:isGridActive');
+      if (storedGrid !== null) setIsGridActive(JSON.parse(storedGrid));
+
+      const storedPicker = localStorage.getItem('gbswplace:isPickFromCanvas');
+      if (storedPicker !== null) setIsPickFromCanvas(JSON.parse(storedPicker));
+
+      const storedColor = localStorage.getItem('gbswplace:selectedColor');
+      if (storedColor) setSelectedColor(JSON.parse(storedColor));
+
+      const storedFav = localStorage.getItem('gbswplace:favorites');
+      if (storedFav) setFavoriteColors(JSON.parse(storedFav));
+
+      const storedView = localStorage.getItem('gbswplace:view');
+      if (storedView) {
+        const v = JSON.parse(storedView);
+        if (typeof v.pixelSize === 'number') setPixelSize(v.pixelSize);
+        if (typeof v.offsetX === 'number') setOffsetX(v.offsetX);
+        if (typeof v.offsetY === 'number') setOffsetY(v.offsetY);
+      }
+
+      const storedPinned = localStorage.getItem('gbswplace:pinned');
+      if (storedPinned) setPinnedPositions(JSON.parse(storedPinned));
+    } catch {
+      // ignore corrupted storage
+    }
+  }, []);
+
+  // Persist enable flag
+  useEffect(() => {
+    try { localStorage.setItem('gbswplace:lsEnabled', JSON.stringify(isLocalStorageEnabled)); } catch {}
+  }, [isLocalStorageEnabled]);
+
+  // Persist selected color
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:selectedColor', JSON.stringify(selectedColor)); } catch {}
+  }, [isLocalStorageEnabled, selectedColor]);
+
+  // Persist favorites
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:favorites', JSON.stringify(favoriteColors)); } catch {}
+  }, [isLocalStorageEnabled, favoriteColors]);
+
+  // Persist active tool and grid and picker
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:activeTool', activeTool === null ? 'null' : activeTool); } catch {}
+  }, [isLocalStorageEnabled, activeTool]);
+
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:isGridActive', JSON.stringify(isGridActive)); } catch {}
+  }, [isLocalStorageEnabled, isGridActive]);
+
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:isPickFromCanvas', JSON.stringify(isPickFromCanvas)); } catch {}
+  }, [isLocalStorageEnabled, isPickFromCanvas]);
+
+  // Persist view (zoom/offset)
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:view', JSON.stringify({ pixelSize, offsetX, offsetY })); } catch {}
+  }, [isLocalStorageEnabled, pixelSize, offsetX, offsetY]);
+
+  // Persist pinned positions
+  useEffect(() => {
+    if (!isLocalStorageEnabled) return;
+    try { localStorage.setItem('gbswplace:pinned', JSON.stringify(pinnedPositions)); } catch {}
+  }, [isLocalStorageEnabled, pinnedPositions]);
+
+  const clearLocalStorageData = useCallback(() => {
+    try {
+      localStorage.removeItem('gbswplace:activeTool');
+      localStorage.removeItem('gbswplace:isGridActive');
+      localStorage.removeItem('gbswplace:isPickFromCanvas');
+      localStorage.removeItem('gbswplace:selectedColor');
+      localStorage.removeItem('gbswplace:favorites');
+      localStorage.removeItem('gbswplace:view');
+      localStorage.removeItem('gbswplace:pinned');
+    } catch {}
+  }, []);
+
+  // 픽셀 데이터 업데이트 헬퍼 함수
+  const updatePixelData = useCallback((updateFn: (prevData: Pixel[][]) => Pixel[][]) => {
+    console.log('픽셀 데이터 업데이트 시작');
+    setPixelData(prev => {
+      const newData = updateFn(prev);
+
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('canvas-force-update', {
+          detail: { timestamp: Date.now() }
+        }));
+      }, 0);
+
+      return newData;
+    });
+  }, []);
+
+  const connectSocket = useCallback(() => {
+    try {
+      const socket = io('http://172.17.0.1:3000', {
+        transports: ['websocket', 'polling'],
+      });
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        setIsConnected(true);
+        setConnectionError(null);
+      });
+
+      const handleBatchPixelsUpdated = (data: BatchPixelUpdatedResponse) => {
+        updatePixelData(prev => {
+          const newData = prev.map(row => [...row]);
+          data.pixels.forEach(({ x, y, color }) => {
+            if (y >= 0 && y < height && x >= 0 && x < width) {
+              newData[y][x] = color;
+            }
+          });
+          return newData;
+        });
+      };
+
+      socket.on('batch-pixels-updated', handleBatchPixelsUpdated);
+
+      socket.on('receive-message', (data: { message: string; sender: string; timestamp: string }) => {
+        setMessages(prev => [...prev, data]);
+      });
+
+      socket.on('disconnect', (reason: string) => {
+        console.log('Socket.IO disconnected:', reason);
+        setIsConnected(false);
+        setIsRenewed(false);
+        if (reason !== 'io client disconnect') {
+          setConnectionError('서버와의 연결이 끊어졌습니다.');
+        }
+      });
+
+      socket.on('connect_error', () => {
+        setIsConnected(false);
+        setConnectionError('서버에 연결할 수 없습니다.');
+        setIsRenewed(false);
+      });
+    } catch (error) {
+      setConnectionError('소켓 연결을 생성할 수 없습니다.');
+    }
+  }, [height, width, updatePixelData]);
+
+  useEffect(() => {
+    connectSocket();
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [connectSocket]);
+
+  const loadPixelData = useCallback(async () => {
+    try {
+      setIsLoadingData(true);
+      console.log('픽셀 데이터 로드 중...');
+      const serverPixels = await fetchPixelData();
+      setIsConnected(serverPixels.length <= 0 ? false : true);
+
+      updatePixelData(() => {
+        const newPixelData: Pixel[][] = Array.from({ length: height }, () =>
+          Array.from({ length: width }, () => ({ r: 255, g: 255, b: 255 }))
+        );
+
+        serverPixels.forEach(pixel => {
+          const { PIXEL_POS_X: x, PIXEL_POS_Y: y, PIXEL_COLOR_R: r, PIXEL_COLOR_G: g, PIXEL_COLOR_B: b } = pixel;
+          if (y >= 0 && y < height && x >= 0 && x < width) {
+            newPixelData[y][x] = { r, g, b };
+          }
+        });
+
+        return newPixelData;
+      });
+
+      setIsRenewed(true);
+      setLastDataLoadTime(new Date());
+      console.log('픽셀 데이터 로드 완료');
+    } catch (error) {
+      console.error('픽셀 데이터 로드 실패:', error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [width, height, updatePixelData]);
+
+  useEffect(() => {
+    loadPixelData();
+
+  }, [loadPixelData]);
+
+  const handleZoom = useCallback((delta: number, centerX?: number, centerY?: number) => {
+    const newPixelSize = Math.max(1, Math.min(50, pixelSize + delta));
+    if (centerX !== undefined && centerY !== undefined) {
+      const worldX = (centerX - offsetX) / pixelSize;
+      const worldY = (centerY - offsetY) / pixelSize;
+      setOffsetX(centerX - worldX * newPixelSize);
+      setOffsetY(centerY - worldY * newPixelSize);
+    }
+    setPixelSize(newPixelSize);
+  }, [pixelSize, offsetX, offsetY]);
+
+  const handlePan = useCallback((deltaX: number, deltaY: number) => {
+    setOffsetX(prev => prev + deltaX);
+    setOffsetY(prev => prev + deltaY);
+  }, []);
+
+  const handleMouseMove = useCallback((pixelX: number, pixelY: number) => {
+    setMousePixelPos({ x: pixelX, y: pixelY });
+  }, []);
+
+  const handlePixelClick = useCallback((pixelX: number, pixelY: number) => {
+    setPinnedPositions(prev => {
+      const exists = prev.some(pos => pos.x === pixelX && pos.y === pixelY);
+      if (exists) return prev.filter(pos => !(pos.x === pixelX && pos.y === pixelY));
+      return [...prev, { x: pixelX, y: pixelY }];
+    });
+  }, []);
+
+  const handleFillPixel = useCallback(async () => {
+    if (pinnedPositions.length === 0) return;
+
+    setIsSaving(true);
+
+    try {
+      const uniquePositionsMap = new Map<string, { x: number; y: number }>();
+      pinnedPositions.forEach(pos => {
+        const key = `${pos.x},${pos.y}`;
+        if (!uniquePositionsMap.has(key)) {
+          uniquePositionsMap.set(key, pos);
+        }
+      });
+      const uniquePositions = Array.from(uniquePositionsMap.values());
+
+      const validPixels = uniquePositions.filter(
+        pos => pos.y >= 0 && pos.y < height && pos.x >= 0 && pos.x < width
+      );
+
+      if (validPixels.length === 0) {
+        setPinnedPositions([]);
+        return;
+      }
+
+      const batchPixelData = validPixels.map(pos => ({
+        posX: pos.x,
+        posY: pos.y,
+        colorR: selectedColor.r,
+        colorG: selectedColor.g,
+        colorB: selectedColor.b
+      }));
+
+      const savedPixels = await saveBatchPixels(batchPixelData);
+
+      if (savedPixels && savedPixels.length > 0) {
+        updatePixelData(prev => {
+          const newData = prev.map(row => [...row]);
+          savedPixels.forEach(pixel => {
+            const { PIXEL_POS_X: x, PIXEL_POS_Y: y, PIXEL_COLOR_R: r, PIXEL_COLOR_G: g, PIXEL_COLOR_B: b } = pixel;
+            if (y >= 0 && y < height && x >= 0 && x < width) {
+              newData[y][x] = { r, g, b };
+            }
+          });
+          return newData;
+        });
+
+        if (socketRef.current && isConnected) {
+          const batchUpdateData: BatchPixelUpdateData = {
+            pixels: savedPixels.map(pixel => ({
+              x: pixel.PIXEL_POS_X,
+              y: pixel.PIXEL_POS_Y,
+              color: {
+                r: pixel.PIXEL_COLOR_R,
+                g: pixel.PIXEL_COLOR_G,
+                b: pixel.PIXEL_COLOR_B
+              }
+            })),
+            uuid: userUUID.current
+          };
+
+          socketRef.current.emit('batch-pixel-update', batchUpdateData);
+        }
+      }
+
+      setPinnedPositions([]);
+
+    } catch (error) {
+      console.error('Error saving batch pixels:', error);
+      await loadPixelData();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [pinnedPositions, selectedColor, height, width, updatePixelData, isConnected, loadPixelData]);
+
+  const sendMessage = useCallback((message: string) => {
+    if (socketRef.current && isConnected) {
+      const messageData: MessageData = {
+        message: message,
+        sender: `User-${userUUID.current.slice(0, 8)}`
+      };
+
+      socketRef.current.emit('send-message', messageData);
+    }
+  }, [isConnected]);
+
+  const addFavoriteColor = useCallback(() => {
+    setFavoriteColors(prev => {
+      if (!prev.some(c => c.r === selectedColor.r && c.g === selectedColor.g && c.b === selectedColor.b)) {
+        return [...prev, selectedColor];
+      }
+      return prev;
+    });
+  }, [selectedColor]);
+
+  const removeFavoriteColor = useCallback((index: number) => {
+    setFavoriteColors(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handlePickColorAt = useCallback((x: number, y: number) => {
+    if (y >= 0 && y < height && x >= 0 && x < width) {
+      const picked = pixelData[y][x];
+      setSelectedColor(picked);
+      setIsPickFromCanvas(false);
+    }
+  }, [height, width, pixelData]);
+
+  const toggleGrid = useCallback(() => setIsGridActive(prev => !prev), []);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.shiftKey && e.key === "Enter" && !isSaving) {
+      handleFillPixel();
+    }
+  }, [handleFillPixel, isSaving]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  const handleReconnect = useCallback(() => {
+    setConnectionError(null);
+    connectSocket();
+  }, [connectSocket]);
+
+  return (
+    <div className="w-full h-full">
+      <div className="fixed top-4 right-4 bg-white p-4 rounded-lg border z-50">
+        <div className="text-sm space-y-2">
+          <div className={`flex items-center gap-2 ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            {isConnected ? 'Connected' : 'Disconnected'}
+          </div>
+          <div>UUID: {userUUID.current.slice(0, 8)}...</div>
+
+          {/* 데이터 로딩 상태 */}
+          <div className="border-t pt-2">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isLoadingData ? 'bg-yellow-500' : isConnected ? isRenewed ? 'bg-green-500' : "bg-red-500" : "bg-red-500"}`}></div>
+              {isLoadingData ? '데이터 로딩 중...' : isConnected ? isRenewed ? '데이터 로드됨' : '갱신되지 않음' : '연결되지 않음'}
+            </div>
+            {lastDataLoadTime && (
+              <div className="text-xs text-gray-500">
+                마지막 업데이트: {lastDataLoadTime.toLocaleTimeString()}
+              </div>
+            )}
+            <button
+              onClick={loadPixelData}
+              disabled={isLoadingData}
+              className="mt-1 px-2 py-1 bg-blue-500 text-white rounded text-xs disabled:bg-gray-400"
+            >
+              {isLoadingData ? '로딩 중...' : '새로고침'}
+            </button>
+          </div>
+
+          {connectionError && (
+            <div className="text-red-600 text-xs">
+              {connectionError}
+              <button
+                onClick={handleReconnect}
+                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
+              >
+                재연결
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg z-50 w-80">
+        <div className="text-sm font-bold mb-2">실시간 채팅</div>
+        <div className="max-h-32 overflow-y-auto border p-2 text-xs space-y-1">
+          {messages.slice(-5).map((msg, index) => (
+            <div key={index}>
+              <span className="font-bold">{msg.sender}:</span> {msg.message}
+            </div>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="메시지 입력 후 Enter"
+          className="w-full mt-2 px-2 py-1 border rounded text-xs"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const input = e.target as HTMLInputElement;
+              if (input.value.trim()) {
+                sendMessage(input.value.trim());
+                input.value = '';
+              }
+            }
+          }}
+        />
+      </div>
+
+      <StatusPanel
+        pixelSize={pixelSize}
+        mousePixelPos={mousePixelPos}
+        pinnedPositionsCount={pinnedPositions.length}
+      />
+      <Toolbar
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
+        isGridActive={isGridActive}
+        toggleGrid={toggleGrid}
+        isLocalStorageEnabled={isLocalStorageEnabled}
+        setIsLocalStorageEnabled={setIsLocalStorageEnabled}
+        clearLocalStorageData={clearLocalStorageData}
+        selectedColor={selectedColor}
+        setSelectedColor={setSelectedColor}
+        favoriteColors={favoriteColors}
+        addFavoriteColor={addFavoriteColor}
+        removeFavoriteColor={removeFavoriteColor}
+        handleFillPixel={handleFillPixel}
+        isPickFromCanvas={isPickFromCanvas}
+        setIsPickFromCanvas={setIsPickFromCanvas}
+      />
+      <Canvas
+        width={width}
+        height={height}
+        pixelSize={pixelSize}
+        offsetX={offsetX}
+        offsetY={offsetY}
+        mousePixelPos={mousePixelPos}
+        pinnedPositions={pinnedPositions}
+        onPinnedPositionsChange={setPinnedPositions}
+        pixelData={pixelData}
+        onPan={handlePan}
+        onZoom={handleZoom}
+        onMouseMove={handleMouseMove}
+        onPixelClick={handlePixelClick}
+        isGridActive={isGridActive}
+        isPickFromCanvas={isPickFromCanvas}
+        onPickColorAt={handlePickColorAt}
+      />
+    </div>
+  );
+};
+
+export default SimpleCanvasPan;
