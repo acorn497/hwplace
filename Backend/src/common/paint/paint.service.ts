@@ -5,6 +5,7 @@ import DB from 'src/util/db.util';
 @Injectable()
 export class PaintService {
   async paintPixel(PTDTO: paintDTO) {
+    console.log(PTDTO.posX, PTDTO.posY)
     const exist = await DB.pixel.findFirst({
       where: {
         PIXEL_POS_X: PTDTO.posX,

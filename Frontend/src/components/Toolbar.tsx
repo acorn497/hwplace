@@ -51,7 +51,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <>
-      {/* 툴바 버튼 */}
+      {/* Toolbar */}
       <div className="fixed w-65 left-4 top-26 flex flex-row z-50">
         <IconToggleButton
           active={activeTool === "settings"}
@@ -69,7 +69,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         </IconToggleButton>
       </div>
 
-      {/* 툴바 메뉴 */}
+      {/* Toolbar Menu */}
       {activeTool === "settings" && (
         <div className="fixed left-4 top-38.5 z-40">
           <div className="w-65 max-h-96 sm:max-h-[70vh] md:max-h-[75vh] bg-white p-4 flex flex-col items-stretch rounded-sm border shadow-lg overflow-y-auto">
@@ -146,7 +146,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 즐겨찾기 추가
               </button>
 
-              {/* Canvas 스포이드 토글 */}
+              {/* Canvas Toggle Spoid */}
               <button
                 className={`border p-2 px-1 rounded-sm mb-3 transition-colors ${isPickFromCanvas ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'}`}
                 onClick={() => setIsPickFromCanvas(!isPickFromCanvas)}
@@ -172,7 +172,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         onClick={(e) => handleFavoriteColorClick(c, idx, e)}
                         title={`RGB(${c.r}, ${c.g}, ${c.b}) - Shift+클릭으로 삭제`}
                       />
-                      {/* Selection indicator for current color */}
                       {selectedColor.r === c.r && selectedColor.g === c.g && selectedColor.b === c.b && (
                         <div className="absolute -inset-1 border-2 border-blue-500 rounded pointer-events-none" />
                       )}

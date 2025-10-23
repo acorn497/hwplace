@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "autocannon": "^8.0.0",
+    "pidusage": "^4.0.1"
+  }
+}

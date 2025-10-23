@@ -5,7 +5,7 @@ import Toolbar from "./components/Toolbar";
 import StatusPanel from "./components/StatusPanel";
 import { Pixel } from "./components/Types";
 
-// 서버 픽셀 데이터 타입
+// Server Pixel Data Type
 interface ServerPixel {
   PIXEL_INDEX: number;
   PIXEL_POS_X: number;
@@ -16,7 +16,7 @@ interface ServerPixel {
   PIXEL_UUID: string;
 }
 
-// 배치 업데이트용 타입
+// Batch Update Type
 interface BatchPixelUpdateData {
   pixels: {
     x: number;
@@ -26,7 +26,7 @@ interface BatchPixelUpdateData {
   uuid: string;
 }
 
-// 배치 응답용 타입
+// Batch Response Type
 interface BatchPixelUpdatedResponse {
   pixels: {
     x: number;
@@ -42,10 +42,10 @@ interface MessageData {
   sender: string;
 }
 
-// API 함수들
+// API Functions
 const fetchPixelData = async (): Promise<ServerPixel[]> => {
   try {
-    const response = await fetch('http://172.17.0.1:3000/paint');
+    const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/paint');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -59,7 +59,7 @@ const fetchPixelData = async (): Promise<ServerPixel[]> => {
 const saveBatchPixels = async (pixels: { posX: number; posY: number; colorR: number; colorG: number; colorB: number }[]): Promise<ServerPixel[] | null> => {
   try {
     console.log(JSON.stringify(pixels))
-    const response = await fetch('http://172.17.0.1:3000/paint', {
+    const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/paint', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ const saveBatchPixels = async (pixels: { posX: number; posY: number; colorR: num
   }
 };
 
-// UUID 생성 함수
+// UUID Generate Function
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0;
@@ -108,7 +108,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     }
   });
 
-  // Socket.IO 관련 상태
+  // Socket.IO States
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messages, setMessages] = useState<{ sender: string; message: string; timestamp: string }[]>([]);
@@ -118,7 +118,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   const socketRef = useRef<Socket | null>(null);
   const userUUID = useRef<string>(generateUUID());
 
-  // 픽셀 데이터 초기화 (기본값: 흰색)
+  // Reset Pixel Datas
   const [pixelData, setPixelData] = useState<Pixel[][]>(() =>
     Array.from({ length: height }, () =>
       Array.from({ length: width }, () => ({ r: 255, g: 255, b: 255 }))
@@ -129,7 +129,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   const [favoriteColors, setFavoriteColors] = useState<Pixel[]>([]);
   const [isPickFromCanvas, setIsPickFromCanvas] = useState(false);
 
-  // LocalStorage: load persisted states once on mount
+  // LocalStorage - load persisted states once on mount
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
     try {
@@ -222,7 +222,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     } catch {}
   }, []);
 
-  // 픽셀 데이터 업데이트 헬퍼 함수
+  // Pixel Data Update Function
   const updatePixelData = useCallback((updateFn: (prevData: Pixel[][]) => Pixel[][]) => {
     console.log('픽셀 데이터 업데이트 시작');
     setPixelData(prev => {
@@ -240,7 +240,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
   const connectSocket = useCallback(() => {
     try {
-      const socket = io('http://172.17.0.1:3000', {
+      const socket = io(import.meta.env.VITE_BACKEND_URL, {
         transports: ['websocket', 'polling'],
       });
       socketRef.current = socket;
@@ -496,7 +496,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
           </div>
           <div>UUID: {userUUID.current.slice(0, 8)}...</div>
 
-          {/* 데이터 로딩 상태 */}
+          {/* Data Loading State */}
           <div className="border-t pt-2">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isLoadingData ? 'bg-yellow-500' : isConnected ? isRenewed ? 'bg-green-500' : "bg-red-500" : "bg-red-500"}`}></div>
