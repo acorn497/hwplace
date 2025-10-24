@@ -6,35 +6,25 @@ import DB from 'src/util/db.util';
 export class PaintService {
   async paintPixel(PTDTO: paintDTO) {
     console.log(PTDTO.posX, PTDTO.posY)
-    const exist = await DB.pixel.findFirst({
+
+    let result;
+    result = await DB.pixel.upsert({
       where: {
+        PIXEL_POS_X_PIXEL_POS_Y: { PIXEL_POS_X: PTDTO.posX, PIXEL_POS_Y: PTDTO.posY }
+      },
+      update: {
+        PIXEL_COLOR_R: PTDTO.colorR,
+        PIXEL_COLOR_G: PTDTO.colorG,
+        PIXEL_COLOR_B: PTDTO.colorB,
+      },
+      create: {
+        PIXEL_COLOR_R: PTDTO.colorR,
+        PIXEL_COLOR_G: PTDTO.colorG,
+        PIXEL_COLOR_B: PTDTO.colorB,
         PIXEL_POS_X: PTDTO.posX,
         PIXEL_POS_Y: PTDTO.posY,
       }
-    });
-    let result;
-    if (exist) {
-      result = await DB.pixel.update({
-        where: {
-          PIXEL_INDEX: exist.PIXEL_INDEX,
-        },
-        data: {
-          PIXEL_COLOR_R: PTDTO.colorR,
-          PIXEL_COLOR_G: PTDTO.colorG,
-          PIXEL_COLOR_B: PTDTO.colorB,
-        }
-      })
-    } else {
-      result = await DB.pixel.create({
-        data: {
-          PIXEL_COLOR_R: PTDTO.colorR,
-          PIXEL_COLOR_G: PTDTO.colorG,
-          PIXEL_COLOR_B: PTDTO.colorB,
-          PIXEL_POS_X: PTDTO.posX,
-          PIXEL_POS_Y: PTDTO.posY, 
-        }
-      })
-    }
+    })
 
     return result;
   }
