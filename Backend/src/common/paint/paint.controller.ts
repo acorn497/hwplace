@@ -1,45 +1,39 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, ParseArrayPipe, Post } from '@nestjs/common';
 import { PaintService } from './paint.service';
-import { paintDTO, paintDTOArray } from './dtos/paint.dto';
-import { plainToInstance } from 'class-transformer';
-import { WebsocketGateway } from '../websocket/websocket.gateway';
+import { PaintPixelDTO, PaintPixelsDTO } from './dtos/paint.dto';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('paint')
 export class PaintController {
   constructor(
     private readonly paintService: PaintService,
-    private readonly wsGateway: WebsocketGateway,
+    private readonly configService: ConfigService,
+
+    @InjectQueue('paint-pixel')
+    private readonly paintPixelQueue: Queue,
   ) { };
 
   @Post()
-  async paintPixel(@Body() body: any) {
-    const dtoArray: paintDTO[] = plainToInstance(paintDTO, Array.isArray(body) ? body : [body]);
-    
-    try {
-      const connectedClients = this.wsGateway.server?.sockets?.sockets?.size || 0;
+  async paintPixel(@Body(new ParseArrayPipe({ items: PaintPixelDTO })) body: PaintPixelDTO[]) {
+    const BATCH_SIZE = this.configService.get<number>("WORKER_BATCH_SIZE") ?? 20;
 
-      if (connectedClients > 0) {
-        const payload = {
-          pixels: dtoArray.map(p => ({
-            x: p.posX,
-            y: p.posY,
-            color: { r: p.colorR, g: p.colorG, b: p.colorB }
-          })),
-          uuid: 'server-http',
-          timestamp: new Date().toISOString()
-        };
+    for (let i = 0; i < body.length; i += BATCH_SIZE) {
+      const batch = body.slice(i, i + BATCH_SIZE);
 
-        this.wsGateway.server.emit('batch-pixels-updated', payload);
-      }
-    } catch (error) {
-      console.error('WS Broadcast failed');
+      await this.paintPixelQueue.add('paint pixel', batch, {
+        priority: 1,
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      })
     }
-
-    const result = await Promise.all(
-      dtoArray.map(dto => this.paintService.paintPixel(dto))
-    );
-
-    return result;
+    return { success: true, batches: Math.ceil(body.length / BATCH_SIZE)}
   }
 
   @Get()

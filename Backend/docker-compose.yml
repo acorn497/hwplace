@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://root:1234@localhost:3306/hwplace
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_USERNAME=default
+      - REDIS_PASSWORD=1234
+      - CANVAS_SIZE_X=500
+      - CANVAS_SIZE_Y=500
+      - WORKER_MAX_CONCURRENT=5
+      - WORKER_MAX_BATCH_SIZE=200
+      - WORKER_BATCH_TIMEOUT=100
+      - WORKER_MAX_RETRY=3
+    depends_on:
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass 1234
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:
