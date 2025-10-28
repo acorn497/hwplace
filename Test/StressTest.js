@@ -47,10 +47,21 @@ async function runTest(config) {
     duration: config.duration,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    setupClient: (client) => {
-      client.setBody(generatePixelBuffer(config.pixelCount));
-      client.on('error', (err) => console.error('Client error:', err.message));
-    },
+    // setupClient 대신 requests 옵션 사용
+    requests: [
+      {
+        method: 'POST',
+        path: `/${API_PATH}`,
+        headers: { 'Content-Type': 'application/json' },
+        // 매 요청마다 새로운 body 생성
+        setupRequest: (req) => {
+          return {
+            ...req,
+            body: JSON.stringify(generateRandomPixels(config.pixelCount))
+          };
+        }
+      }
+    ]
   });
 
   clearInterval(monitorInterval);
@@ -85,12 +96,12 @@ async function runTest(config) {
 
 async function main() {
   await runTest({ title: 'Warm Up: 1픽셀, 200커넥션', connections: 200, duration: 10, pixelCount: 1 });
-  await runTest({ title: 'Test 1: 1픽셀, 25커넥션', connections: 25, duration: 20, pixelCount: 100 });
-  // await runTest({ title: 'Test 2: 1픽셀, 50커넥션', connections: 50, duration: 20, pixelCount: 1 });
-  // await runTest({ title: 'Test 3: 1픽셀, 75커넥션', connections: 75, duration: 20, pixelCount: 1 });
-  // await runTest({ title: 'Test 4: 1픽셀, 100커넥션', connections: 100, duration: 20, pixelCount: 1 });
-  // await runTest({ title: 'Test 5: 1픽셀, 150커넥션', connections: 150, duration: 20, pixelCount: 1 });
-  // await runTest({ title: 'Test 6: 1픽셀, 200커넥션', connections: 200, duration: 20, pixelCount: 1 });
+  await runTest({ title: 'Test 1: 1픽셀, 50커넥션', connections: 50, duration: 20, pixelCount: 1 });
+  await runTest({ title: 'Test 2: 1픽셀, 100커넥션', connections: 100, duration: 20, pixelCount: 1 });
+  await runTest({ title: 'Test 3: 10픽셀, 75커넥션', connections: 75, duration: 20, pixelCount: 10 });
+  await runTest({ title: 'Test 4: 10픽셀, 130커넥션', connections: 100, duration: 20, pixelCount: 10 });
+  await runTest({ title: 'Test 5: 50픽셀, 100커넥션', connections: 150, duration: 20, pixelCount: 50 });
+  await runTest({ title: 'Test 6: 100픽셀, 130커넥션', connections: 200, duration: 20, pixelCount: 100 });
 
   console.log('\n' + '='.repeat(60));
   console.log('테스트 완료');
