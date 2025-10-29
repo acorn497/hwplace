@@ -20,7 +20,7 @@ interface NotificationProps {
   content?: string,
   method?: types,
   callback: () => void,
-  duration?: number,
+  duration?: number | boolean,
 }
 
 export default function Notification({ title, content, method = types.INFO, callback, duration = 20 }: NotificationProps) {
@@ -35,10 +35,9 @@ export default function Notification({ title, content, method = types.INFO, call
   }, []);
 
   useEffect(() => {
-    if (timer == duration) {
-      setFadeOut(true);
-    }
-  }, [timer]);
+    if (timer == duration && typeof duration !== 'boolean') setFadeOut(true);
+    else if (!duration && typeof duration == 'boolean') setFadeOut(true);
+  }, [timer, duration]);
 
   useEffect(() => {
     if (!fadeOut) return;
@@ -47,6 +46,7 @@ export default function Notification({ title, content, method = types.INFO, call
   }, [fadeOut]);
 
   function handleOnMouseEnter() {
+    if (typeof duration == 'boolean') return;
     setHovering(true);
     setTimer(0);
   }
@@ -64,7 +64,7 @@ export default function Notification({ title, content, method = types.INFO, call
   const Icon = icons[method];
 
   return (
-    <div className={`max-w-200 bg-bg-primary backdrop-blur-md fixed left-1/2 -translate-x-1/2 translate-y-1/2 rounded-lg border border-border-primary grid grid-cols-[30px_1fr] items-center px-2.5 transition-[opacity, transform] duration-500 ${fadeIn ? "min-w-150 min-h-10 bottom-50" : "min-w-149 min-h-8.5 bottom-48"} ${fadeOut ? "opacity-0" : fadeIn ? "opacity-100" : "opacity-0"}`} onMouseEnter={() => handleOnMouseEnter()} onMouseLeave={() => handleOnMouseLeave()} >
+    <div className={`bg-bg-primary backdrop-blur-md fixed left-1/2 -translate-x-1/2 translate-y-1/2 rounded-lg border border-border-primary grid grid-cols-[30px_1fr] items-center px-2.5 transition-[opacity, transform] duration-500 ${fadeIn ? "w-160 min-h-10 bottom-50" : "w-159 min-h-8.5 bottom-48"} ${fadeOut ? "opacity-0" : fadeIn ? "opacity-100" : "opacity-0"}`} onMouseEnter={() => handleOnMouseEnter()} onMouseLeave={() => handleOnMouseLeave()} >
       <Icon className={`
         h-5 w-5
         ${method === types.INFO ? "text-blue-300" : ""} 

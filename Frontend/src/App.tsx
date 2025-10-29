@@ -5,43 +5,8 @@ import Toolbar from "./components/Toolbar";
 import StatusPanel from "./components/StatusPanel";
 import { Pixel } from "./components/Types";
 import Notification, { types } from "./components/Notification";
+import { BatchPixelUpdateData, BatchPixelUpdatedResponse, MessageData, ServerPixel } from "./types";
 
-// Server Pixel Data Type
-interface ServerPixel {
-  PIXEL_INDEX: number;
-  PIXEL_POS_X: number;
-  PIXEL_POS_Y: number;
-  PIXEL_COLOR_R: number;
-  PIXEL_COLOR_G: number;
-  PIXEL_COLOR_B: number;
-  PIXEL_UUID: string;
-}
-
-// Batch Update Type
-interface BatchPixelUpdateData {
-  pixels: {
-    x: number;
-    y: number;
-    color: { r: number; g: number; b: number };
-  }[];
-  uuid: string;
-}
-
-// Batch Response Type
-interface BatchPixelUpdatedResponse {
-  pixels: {
-    x: number;
-    y: number;
-    color: { r: number; g: number; b: number };
-  }[];
-  uuid: string;
-  timestamp: string;
-}
-
-interface MessageData {
-  message: string;
-  sender: string;
-}
 
 // API Functions
 const fetchPixelData = async (): Promise<ServerPixel[]> => {
@@ -239,6 +204,12 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     });
   }, []);
 
+  const [unableToConnect, setUnableToConnect] = useState(false);
+
+  useEffect(() => {
+    if (unableToConnect) setNotifications((prev) => [...prev, { title: "Server Sonnection Lost", content: "현재 HWPlace Live 서비스에 연결할 수 없습니다.", method: types.ERROR, duration: unableToConnect }])
+  }, [unableToConnect])
+
   const connectSocket = useCallback(() => {
     try {
       const socket = io(import.meta.env.VITE_BACKEND_URL, {
@@ -249,6 +220,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
       socket.on('connect', () => {
         setIsConnected(true);
         setConnectionError(null);
+        setUnableToConnect(false)
       });
 
       const handleBatchPixelsUpdated = (data: BatchPixelUpdatedResponse) => {
@@ -283,6 +255,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
         setIsConnected(false);
         setConnectionError('서버에 연결할 수 없습니다.');
         setIsRenewed(false);
+        setUnableToConnect(true);
       });
     } catch (error) {
       setConnectionError('소켓 연결을 생성할 수 없습니다.');
@@ -498,13 +471,10 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     title: string;
     content: string;
     method?: types;
-    duration?: number;
+    duration?: number | boolean;
   }
 
-  const [notifications, setNotifications] = useState<NotificationType[]>([
-    { title: "Welcome To HWplace!", content: "Maybe Your First Connection! :)", method: types.OK, duration: 5 },
-    { title: "Server Connection Lost", content: "Failed to Connect HWplace Live Service.", method: types.ERROR, duration: 20 },
-  ]);
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
 
   useEffect(() => {
