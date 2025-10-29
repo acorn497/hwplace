@@ -386,14 +386,14 @@ const Canvas: React.FC<CanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden bg-gray-200"
+      className="w-full h-full"
       style={{ touchAction: "none", overscrollBehavior: "none" }}
     >
       <canvas
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="bg-white"
+        className="bg-[repeating-linear-gradient(45deg,#e1e1e1_0,#e1e1e1_5px,transparent_0,transparent_50%)] bg-[length:20px_20px] bg-fixed"
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}

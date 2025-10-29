@@ -2,7 +2,7 @@ const autocannon = require('autocannon');
 const fs = require('fs');
 const pidusage = require('pidusage');
 
-const BASE_URL = 'http://localhost:3000/';
+const BASE_URL = 'https://port-0-hwplace-mgroz4g3d2d6b70d.sel3.cloudtype.app/';
 const API_PATH = 'paint';
 
 function generateRandomPixel() {
@@ -17,10 +17,6 @@ function generateRandomPixel() {
 
 function generateRandomPixels(count = 1) {
   return Array.from({ length: count }, () => generateRandomPixel());
-}
-
-function generatePixelBuffer(count) {
-  return Buffer.from(JSON.stringify(generateRandomPixels(count)));
 }
 
 async function runTest(config) {
@@ -79,29 +75,17 @@ async function runTest(config) {
   console.log(`  타임아웃: ${result.timeouts}`);
   console.log(`  오류율: ${(result.errors / result.requests.total * 100).toFixed(2)}%`);
 
-  const logData = {
-    ...config,
-    requests: result.requests,
-    latency: result.latency,
-    throughput: pixelsPerSec,
-    resourceStats,
-  };
-
-  const filename = `result_${config.connections}c_${config.pixelCount}px.json`;
-  fs.writeFileSync(filename, JSON.stringify(logData, null, 2));
-  console.log(`📄 결과 저장: ${filename}`);
-
   return result;
 }
 
 async function main() {
-  await runTest({ title: 'Warm Up: 1픽셀, 200커넥션', connections: 200, duration: 10, pixelCount: 1 });
-  await runTest({ title: 'Test 1: 1픽셀, 50커넥션', connections: 50, duration: 20, pixelCount: 1 });
-  await runTest({ title: 'Test 2: 1픽셀, 100커넥션', connections: 100, duration: 20, pixelCount: 1 });
-  await runTest({ title: 'Test 3: 10픽셀, 75커넥션', connections: 75, duration: 20, pixelCount: 10 });
-  await runTest({ title: 'Test 4: 10픽셀, 130커넥션', connections: 100, duration: 20, pixelCount: 10 });
-  await runTest({ title: 'Test 5: 50픽셀, 100커넥션', connections: 150, duration: 20, pixelCount: 50 });
-  await runTest({ title: 'Test 6: 100픽셀, 130커넥션', connections: 200, duration: 20, pixelCount: 100 });
+  // await runTest({ title: 'Warm Up: 1픽셀, 200커넥션', connections: 200, duration: 10, pixelCount: 1 });
+  // await runTest({ title: 'Test 1: 1픽셀, 50커넥션', connections: 50, duration: 20, pixelCount: 1 });
+  // await runTest({ title: 'Test 2: 1픽셀, 100커넥션', connections: 100, duration: 20, pixelCount: 1 });
+  // await runTest({ title: 'Test 3: 10픽셀, 75커넥션', connections: 75, duration: 20, pixelCount: 10 });
+  // await runTest({ title: 'Test 4: 10픽셀, 130커넥션', connections: 100, duration: 20, pixelCount: 10 });
+  // await runTest({ title: 'Test 5: 50픽셀, 100커넥션', connections: 150, duration: 20, pixelCount: 50 });
+  await runTest({ title: 'Test 6: 100픽셀, 200커넥션', connections: 200, duration: 20, pixelCount: 100 });
 
   console.log('\n' + '='.repeat(60));
   console.log('테스트 완료');

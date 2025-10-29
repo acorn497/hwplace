@@ -52,39 +52,39 @@ const Toolbar: React.FC<ToolbarProps> = ({
   return (
     <>
       {/* Toolbar */}
-      <div className="fixed w-65 left-4 top-26 flex flex-row z-50">
+      <div className="fixed w-65 left-4 top-28 flex flex-row z-50">
         <IconToggleButton
           active={activeTool === "settings"}
           onClick={() => setActiveTool(activeTool === "settings" ? null : "settings")}
           title="Settings"
         >
-          <Settings className="w-4.5 h-4.5" />
+          <Settings className="w-5.5 h-5.5" />
         </IconToggleButton>
         <IconToggleButton
           active={activeTool === "brush"}
           onClick={() => setActiveTool(activeTool === "brush" ? null : "brush")}
           title="Brush"
         >
-          <Brush className="w-4.5 h-4.5" />
+          <Brush className="w-5.5 h-5.5" />
         </IconToggleButton>
       </div>
 
       {/* Toolbar Menu */}
       {activeTool === "settings" && (
-        <div className="fixed left-4 top-38.5 z-40">
-          <div className="w-65 max-h-96 sm:max-h-[70vh] md:max-h-[75vh] bg-white p-4 flex flex-col items-stretch rounded-sm border shadow-lg overflow-y-auto">
+        <div className="fixed left-4 top-44 z-40">
+          <div className="background w-65 max-h-96 sm:max-h-[70vh] md:max-h-[75vh] flex flex-col items-stretch overflow-y-auto">
             <div className="mb-3">
-              <h3 className="font-semibold text-gray-900">Settings</h3>
-              <p className="text-xs text-gray-500 mt-0.5">작업 환경을 간편하게 설정하세요</p>
+              <h3 className="font-semibold text-white">Settings</h3>
+              <p className="text-xs text-gray-300 mt-0.5">작업 환경을 간편하게 설정하세요</p>
             </div>
 
-            <div className="border-t my-2" />
+            <div className="border-t my-2 border-border-primary" />
 
             {/* Grid Toggle */}
             <div className="flex items-center justify-between py-2">
               <div>
-                <div className="text-sm font-medium text-gray-800">그리드 표시</div>
-                <div className="text-xs text-gray-500">캔버스에 보조 그리드를 표시합니다</div>
+                <div className="text-sm font-medium text-white">그리드 표시</div>
+                <div className="text-xs text-gray-300 max-w-9/10">캔버스에 보조 그리드를 표시합니다</div>
               </div>
               <IconToggleButton
                 variant="switch"
@@ -97,8 +97,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
             {/* Local Storage Toggle */}
             <div className="flex items-center justify-between py-2">
               <div>
-                <div className="text-sm font-medium text-gray-800">로컬 저장 사용</div>
-                <div className="text-xs text-gray-500">색상/뷰/고정 픽셀을 자동 저장합니다</div>
+                <div className="text-sm font-medium text-white">로컬 저장 사용</div>
+                <div className="text-xs text-gray-300 max-w-9/10">색상/뷰/고정 픽셀을 자동 저장합니다</div>
               </div>
               <IconToggleButton
                 variant="switch"
@@ -112,8 +112,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
             {/* Clear Local Storage */}
             <div className="flex items-center justify-between py-2">
               <div>
-                <div className="text-sm font-medium text-gray-800">저장 데이터 삭제</div>
-                <div className="text-xs text-gray-500">브라우저에 저장된 모든 로컬 데이터를 삭제합니다</div>
+                <div className="text-sm font-medium text-white">저장 데이터 삭제</div>
+                <div className="text-xs text-gray-300 max-w-4/5">브라우저에 저장된 모든 로컬 데이터를 삭제합니다</div>
               </div>
               <button
                 type="button"
@@ -128,9 +128,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
       )}
 
       {activeTool === "brush" && (
-        <div className="fixed left-4 top-38.5 z-40">
-          <div className="w-65 max-h-96 sm:max-h-[70vh] md:max-h-[75vh] bg-white p-4 flex flex-col items-start rounded-sm border shadow-lg overflow-y-auto">
-            <h3 className="font-semibold text-gray-800 mb-3 flex-shrink-0">Brush Tool</h3>
+        <div className="fixed left-4 top-44 z-40">
+          <div className="background w-65 max-h-96 sm:max-h-[70vh] md:max-h-[75vh] flex flex-col items-start overflow-y-auto">
+            <h3 className="font-semibold mb-3 flex-shrink-0">Brush Tool</h3>
 
             {/* Color Picker */}
             <div className="mb-3 flex-shrink-0">
@@ -140,15 +140,15 @@ const Toolbar: React.FC<ToolbarProps> = ({
             <div className="w-full h-12 flex flex-row justify-between">
               {/* Add to Favorites Button */}
               <button
-                className="border px-2 text-sm rounded-sm mb-3 hover:bg-gray-50 transition-colors"
+                className="border border-border-primary px-2 text-sm rounded-sm mb-3 transition-colors font-semibold"
                 onClick={addFavoriteColor}
               >
-                즐겨찾기 추가
+                색상 즐겨찾기 추가
               </button>
 
               {/* Canvas Toggle Spoid */}
               <button
-                className={`border p-2 px-1 rounded-sm mb-3 transition-colors ${isPickFromCanvas ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'}`}
+                className={`border border-border-primary p-2 px-1 rounded-sm mb-3 transition-colors ${isPickFromCanvas ? 'bg-bg-primary-hover border-border-primary-active' : 'border-border-primary'}`}
                 onClick={() => setIsPickFromCanvas(!isPickFromCanvas)}
               >
                 <Pipette className="h-4" />
@@ -158,8 +158,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
             {/* Favorite Colors */}
             {favoriteColors.length > 0 && (
               <div className="mb-3 flex-shrink-0 w-full">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">즐겨찾기 색상</h4>
-                <p className="text-xs text-gray-500 mb-2">Shift+클릭으로 삭제</p>
+                <h4 className="text-sm font-medium mb-2">즐겨찾기 색상</h4>
+                <p className="text-xs text-gray-300 mb-2">Shift+클릭으로 삭제</p>
                 <div className="flex flex-row flex-wrap gap-2 max-h-32 overflow-y-auto py-2 px-1">
                   {favoriteColors.map((c, idx) => (
                     <div
@@ -184,12 +184,12 @@ const Toolbar: React.FC<ToolbarProps> = ({
             {/* Fill Button */}
             <div className="flex-shrink-0">
               <button
-                className="px-3 py-2 bg-blue-500 text-white rounded-sm hover:bg-blue-600 transition-colors text-sm font-medium"
+                className="px-3 py-2 rounded-sm transition-colors text-sm font-medium border border-border-primary"
                 onClick={handleFillPixel}
               >
                 색칠하기
               </button>
-              <p className="text-xs text-gray-500 mt-1">또는 Shift+Enter</p>
+              <p className="text-xs text-gray-300 mt-1">또는 Shift+Enter</p>
             </div>
           </div>
         </div>
