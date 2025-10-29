@@ -18,10 +18,10 @@ const IconToggleButton: React.FC<IconToggleButtonProps> = ({ active, onClick, ti
         aria-checked={active}
         title={title}
         onClick={onClick}
-        className={`relative flex flex-col justify-center h-5 w-9 shrink-0 cursor-pointer rounded-full border transition-colors duration-200 focus:outline-none ${active ? "bg-blue-500 border-blue-500" : "bg-gray-200 border-gray-200"} ${className}`}
+        className={`relative flex flex-col justify-center h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none ${active ? "bg-blue-500" : "bg-bg-primary"} ${className}`}
       >
         <span
-          className={`absolute h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${active ? "translate-x-full" : "left-0"}`}
+          className={`absolute h-4 w-4 transform rounded-full bg-white shadow transition-all duration-200 ${active ? "left-1/2" : "left-1/20"}`}
         />
       </button>
     );
@@ -33,7 +33,7 @@ const IconToggleButton: React.FC<IconToggleButtonProps> = ({ active, onClick, ti
       aria-pressed={active}
       title={title}
       onClick={onClick}
-      className={`bg-white p-3 rounded-sm border mr-2 hover:cursor-pointer transition-colors ${active ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"} ${className}`}
+      className={`bg-bg-primary backdrop-blur-md p-4 rounded-sm border border-border-primary mr-2 hover:cursor-pointer transition-colors ${active ? "border-border-primary-active bg-bg-primary-hover" : "hover:bg-bg-primary-hover"} ${className}`}
     >
       {children}
     </button>

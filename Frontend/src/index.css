@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg-primary: rgba(40, 40, 40, 0.5);
+  --color-bg-primary-hover: rgba(0, 0, 0, 0.5);
+  --color-bg-primary-hover-light: rgba(30, 30, 30, 0.15);
+
+  --color-border-primary: rgba(90, 90, 90, 1);
+  --color-border-primary-active: rgba(120, 120, 255, 1)
+}
+
+@layer {
+  body {
+    color: white;
+  }
+
+  input {
+    @apply bg-bg-primary
+  }
+
+  .background {
+    @apply fixed bg-bg-primary backdrop-blur-lg border border-border-primary rounded-md p-4;
+  }
+}
+
+@layer base {
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  
+  button {
+    @apply bg-bg-primary hover:bg-bg-primary-hover-light hover:cursor-pointer
+  }
+}

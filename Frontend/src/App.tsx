@@ -4,43 +4,9 @@ import Canvas from "./components/Canvas";
 import Toolbar from "./components/Toolbar";
 import StatusPanel from "./components/StatusPanel";
 import { Pixel } from "./components/Types";
+import Notification, { types } from "./components/Notification";
+import { BatchPixelUpdateData, BatchPixelUpdatedResponse, MessageData, ServerPixel } from "./types";
 
-// Server Pixel Data Type
-interface ServerPixel {
-  PIXEL_INDEX: number;
-  PIXEL_POS_X: number;
-  PIXEL_POS_Y: number;
-  PIXEL_COLOR_R: number;
-  PIXEL_COLOR_G: number;
-  PIXEL_COLOR_B: number;
-  PIXEL_UUID: string;
-}
-
-// Batch Update Type
-interface BatchPixelUpdateData {
-  pixels: {
-    x: number;
-    y: number;
-    color: { r: number; g: number; b: number };
-  }[];
-  uuid: string;
-}
-
-// Batch Response Type
-interface BatchPixelUpdatedResponse {
-  pixels: {
-    x: number;
-    y: number;
-    color: { r: number; g: number; b: number };
-  }[];
-  uuid: string;
-  timestamp: string;
-}
-
-interface MessageData {
-  message: string;
-  sender: string;
-}
 
 // API Functions
 const fetchPixelData = async (): Promise<ServerPixel[]> => {
@@ -101,7 +67,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   const [isSaving, setIsSaving] = useState(false);
   const [isLocalStorageEnabled, setIsLocalStorageEnabled] = useState<boolean>(() => {
     try {
-      const v = localStorage.getItem('gbswplace:lsEnabled');
+      const v = localStorage.getItem('hwplace:lsEnabled');
       return v ? JSON.parse(v) : false;
     } catch {
       return false;
@@ -133,24 +99,24 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
     try {
-      const storedActiveTool = localStorage.getItem('gbswplace:activeTool');
+      const storedActiveTool = localStorage.getItem('hwplace:activeTool');
       if (storedActiveTool === 'settings' || storedActiveTool === 'brush' || storedActiveTool === 'null') {
         setActiveTool(storedActiveTool === 'null' ? null : (storedActiveTool as "settings" | "brush"));
       }
 
-      const storedGrid = localStorage.getItem('gbswplace:isGridActive');
+      const storedGrid = localStorage.getItem('hwplace:isGridActive');
       if (storedGrid !== null) setIsGridActive(JSON.parse(storedGrid));
 
-      const storedPicker = localStorage.getItem('gbswplace:isPickFromCanvas');
+      const storedPicker = localStorage.getItem('hwplace:isPickFromCanvas');
       if (storedPicker !== null) setIsPickFromCanvas(JSON.parse(storedPicker));
 
-      const storedColor = localStorage.getItem('gbswplace:selectedColor');
+      const storedColor = localStorage.getItem('hwplace:selectedColor');
       if (storedColor) setSelectedColor(JSON.parse(storedColor));
 
-      const storedFav = localStorage.getItem('gbswplace:favorites');
+      const storedFav = localStorage.getItem('hwplace:favorites');
       if (storedFav) setFavoriteColors(JSON.parse(storedFav));
 
-      const storedView = localStorage.getItem('gbswplace:view');
+      const storedView = localStorage.getItem('hwplace:view');
       if (storedView) {
         const v = JSON.parse(storedView);
         if (typeof v.pixelSize === 'number') setPixelSize(v.pixelSize);
@@ -158,7 +124,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
         if (typeof v.offsetY === 'number') setOffsetY(v.offsetY);
       }
 
-      const storedPinned = localStorage.getItem('gbswplace:pinned');
+      const storedPinned = localStorage.getItem('hwplace:pinned');
       if (storedPinned) setPinnedPositions(JSON.parse(storedPinned));
     } catch {
       // ignore corrupted storage
@@ -167,59 +133,59 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
   // Persist enable flag
   useEffect(() => {
-    try { localStorage.setItem('gbswplace:lsEnabled', JSON.stringify(isLocalStorageEnabled)); } catch {}
+    try { localStorage.setItem('hwplace:lsEnabled', JSON.stringify(isLocalStorageEnabled)); } catch { }
   }, [isLocalStorageEnabled]);
 
   // Persist selected color
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:selectedColor', JSON.stringify(selectedColor)); } catch {}
+    try { localStorage.setItem('hwplace:selectedColor', JSON.stringify(selectedColor)); } catch { }
   }, [isLocalStorageEnabled, selectedColor]);
 
   // Persist favorites
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:favorites', JSON.stringify(favoriteColors)); } catch {}
+    try { localStorage.setItem('hwplace:favorites', JSON.stringify(favoriteColors)); } catch { }
   }, [isLocalStorageEnabled, favoriteColors]);
 
   // Persist active tool and grid and picker
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:activeTool', activeTool === null ? 'null' : activeTool); } catch {}
+    try { localStorage.setItem('hwplace:activeTool', activeTool === null ? 'null' : activeTool); } catch { }
   }, [isLocalStorageEnabled, activeTool]);
 
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:isGridActive', JSON.stringify(isGridActive)); } catch {}
+    try { localStorage.setItem('hwplace:isGridActive', JSON.stringify(isGridActive)); } catch { }
   }, [isLocalStorageEnabled, isGridActive]);
 
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:isPickFromCanvas', JSON.stringify(isPickFromCanvas)); } catch {}
+    try { localStorage.setItem('hwplace:isPickFromCanvas', JSON.stringify(isPickFromCanvas)); } catch { }
   }, [isLocalStorageEnabled, isPickFromCanvas]);
 
   // Persist view (zoom/offset)
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:view', JSON.stringify({ pixelSize, offsetX, offsetY })); } catch {}
+    try { localStorage.setItem('hwplace:view', JSON.stringify({ pixelSize, offsetX, offsetY })); } catch { }
   }, [isLocalStorageEnabled, pixelSize, offsetX, offsetY]);
 
   // Persist pinned positions
   useEffect(() => {
     if (!isLocalStorageEnabled) return;
-    try { localStorage.setItem('gbswplace:pinned', JSON.stringify(pinnedPositions)); } catch {}
+    try { localStorage.setItem('hwplace:pinned', JSON.stringify(pinnedPositions)); } catch { }
   }, [isLocalStorageEnabled, pinnedPositions]);
 
   const clearLocalStorageData = useCallback(() => {
     try {
-      localStorage.removeItem('gbswplace:activeTool');
-      localStorage.removeItem('gbswplace:isGridActive');
-      localStorage.removeItem('gbswplace:isPickFromCanvas');
-      localStorage.removeItem('gbswplace:selectedColor');
-      localStorage.removeItem('gbswplace:favorites');
-      localStorage.removeItem('gbswplace:view');
-      localStorage.removeItem('gbswplace:pinned');
-    } catch {}
+      localStorage.removeItem('hwplace:activeTool');
+      localStorage.removeItem('hwplace:isGridActive');
+      localStorage.removeItem('hwplace:isPickFromCanvas');
+      localStorage.removeItem('hwplace:selectedColor');
+      localStorage.removeItem('hwplace:favorites');
+      localStorage.removeItem('hwplace:view');
+      localStorage.removeItem('hwplace:pinned');
+    } catch { }
   }, []);
 
   // Pixel Data Update Function
@@ -238,6 +204,12 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     });
   }, []);
 
+  const [unableToConnect, setUnableToConnect] = useState(false);
+
+  useEffect(() => {
+    if (unableToConnect) setNotifications((prev) => [...prev, { title: "Server Sonnection Lost", content: "현재 HWPlace Live 서비스에 연결할 수 없습니다.", method: types.ERROR, duration: unableToConnect }])
+  }, [unableToConnect])
+
   const connectSocket = useCallback(() => {
     try {
       const socket = io(import.meta.env.VITE_BACKEND_URL, {
@@ -248,6 +220,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
       socket.on('connect', () => {
         setIsConnected(true);
         setConnectionError(null);
+        setUnableToConnect(false);
       });
 
       const handleBatchPixelsUpdated = (data: BatchPixelUpdatedResponse) => {
@@ -266,6 +239,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
       socket.on('receive-message', (data: { message: string; sender: string; timestamp: string }) => {
         setMessages(prev => [...prev, data]);
+        msgRef.current?.scrollIntoView({ behavior: "smooth" })
       });
 
       socket.on('disconnect', (reason: string) => {
@@ -281,6 +255,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
         setIsConnected(false);
         setConnectionError('서버에 연결할 수 없습니다.');
         setIsRenewed(false);
+        setUnableToConnect(true);
       });
     } catch (error) {
       setConnectionError('소켓 연결을 생성할 수 없습니다.');
@@ -486,31 +461,73 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     connectSocket();
   }, [connectSocket]);
 
+  const msgRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    msgRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  type NotificationType = {
+    title: string;
+    content: string;
+    method?: types;
+    duration?: number | boolean;
+  }
+
+  const [notifications, setNotifications] = useState<NotificationType[]>([
+    { title: "Greetings!", content: "Welcome to HWPlace.", method: types.OK, duration: 2 }
+  ]);
+  const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
+
+  useEffect(() => {
+    setDisplayingNotification(null);
+    setDisplayingNotification(notifications[0]);
+    console.log("Setted Notification", notifications)
+  }, [notifications]);
+
+  function handleOnFinish() {
+    setNotifications((prev) => prev?.slice(1));
+    console.log("Sliced", notifications);
+  }
+
+  useEffect(() => {
+    console.log("displayChanged");
+  }, [displayingNotification]);
+
+
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    setCounter((prev) => prev + 1);
+  }, [displayingNotification]);
+
   return (
     <div className="w-full h-full">
-      <div className="fixed top-4 right-4 bg-white p-4 rounded-lg border z-50">
+      {displayingNotification && <Notification key={counter} title={displayingNotification.title} content={displayingNotification.content} method={displayingNotification.method} callback={() => handleOnFinish()} duration={displayingNotification.duration} />}
+
+      <div className="background top-4 right-4 z-50">
         <div className="text-sm space-y-2">
-          <div className={`flex items-center gap-2 ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <div className={`flex items-center gap-2 ${isConnected ? 'text-green-400' : 'text-red-600'}`}>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-500'}`}></div>
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
-          <div>UUID: {userUUID.current.slice(0, 8)}...</div>
+          <div className="text-white">UUID: {userUUID.current.slice(0, 8)}...</div>
 
           {/* Data Loading State */}
-          <div className="border-t pt-2">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isLoadingData ? 'bg-yellow-500' : isConnected ? isRenewed ? 'bg-green-500' : "bg-red-500" : "bg-red-500"}`}></div>
+          <div className="border-t pt-2 border-border-primary">
+            <div className="flex items-center gap-2 text-white">
+              <div className={`w-2 h-2 rounded-full ${isLoadingData ? 'bg-yellow-500' : isConnected ? isRenewed ? 'bg-green-400' : "bg-red-500" : "bg-red-500"}`}></div>
               {isLoadingData ? '데이터 로딩 중...' : isConnected ? isRenewed ? '데이터 로드됨' : '갱신되지 않음' : '연결되지 않음'}
             </div>
             {lastDataLoadTime && (
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-300">
                 마지막 업데이트: {lastDataLoadTime.toLocaleTimeString()}
               </div>
             )}
             <button
               onClick={loadPixelData}
               disabled={isLoadingData}
-              className="mt-1 px-2 py-1 bg-blue-500 text-white rounded text-xs disabled:bg-gray-400"
+              className="mt-1 px-2 py-1 bg-blue-500 rounded text-xs disabled:bg-gray-400"
             >
               {isLoadingData ? '로딩 중...' : '새로고침'}
             </button>
@@ -521,7 +538,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
               {connectionError}
               <button
                 onClick={handleReconnect}
-                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                className="ml-2 px-2 py-1 bg-blue-500 rounded text-xs"
               >
                 재연결
               </button>
@@ -530,11 +547,11 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
         </div>
       </div>
 
-      <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg z-50 w-80">
-        <div className="text-sm font-bold mb-2">실시간 채팅</div>
-        <div className="max-h-32 overflow-y-auto border p-2 text-xs space-y-1">
-          {messages.slice(-5).map((msg, index) => (
-            <div key={index}>
+      <div className="background bottom-4 right-4 z-50 w-80">
+        <div className="text-sm font-bold mb-2 text-white">실시간 채팅</div>
+        <div className="h-32 overflow-y-auto p-2 text-xs space-y-1 bg-bg-primary rounded-sm flex flex-col" ref={msgRef}>
+          {messages.map((msg, index) => (
+            <div key={index} className="text-white">
               <span className="font-bold">{msg.sender}:</span> {msg.message}
             </div>
           ))}
@@ -542,7 +559,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
         <input
           type="text"
           placeholder="메시지 입력 후 Enter"
-          className="w-full mt-2 px-2 py-1 border rounded text-xs"
+          className="w-full mt-2 px-2 py-1 border border-border-primary rounded text-xs text-white"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               const input = e.target as HTMLInputElement;

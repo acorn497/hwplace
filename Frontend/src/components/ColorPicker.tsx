@@ -101,18 +101,18 @@ const ColorPickerComponent: React.FC<ColorPickerProps> = ({
         ref={canvasRef}
         width={width}
         height={height}
-        style={{ border: "1px solid #ccc", cursor: "crosshair" }}
         onClick={pickColor}
+        className="hover: cursor-crosshair border border-border-primary rounded-sm"
         onMouseMove={e => e.buttons === 1 && pickColor(e)}
       />
 
       {/* Current Color Display */}
       <div className="flex items-center gap-2">
         <div
-          className="w-8 h-8 border border-gray-300 rounded"
+          className="w-8 h-8 border border-border-primary rounded"
           style={{ backgroundColor: `rgba(${color.r}, ${color.g}, ${color.b}, 1)` }}
         />
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-white">
           RGB({color.r}, {color.g}, {color.b})
         </span>
       </div>
@@ -120,36 +120,36 @@ const ColorPickerComponent: React.FC<ColorPickerProps> = ({
       {/* RGB Input Fields */}
       <div className="flex gap-1">
         <div className="flex flex-col items-center">
-          <label className="text-xs text-red-600 font-medium">R</label>
+          <label className="text-sm text-red-500 font-medium">R</label>
           <input
             type="number"
             min="0"
             max="255"
             value={color.r}
             onChange={(e) => handleRGBChange('r', e.target.value)}
-            className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded text-center"
+            className="w-12 px-1 py-0.5 text-sm border border-border-primary rounded text-center"
           />
         </div>
         <div className="flex flex-col items-center">
-          <label className="text-xs text-green-600 font-medium">G</label>
+          <label className="text-sm text-green-500 font-medium">G</label>
           <input
             type="number"
             min="0"
             max="255"
             value={color.g}
             onChange={(e) => handleRGBChange('g', e.target.value)}
-            className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded text-center"
+            className="w-12 px-1 py-0.5 text-sm border border-border-primary rounded text-center"
           />
         </div>
         <div className="flex flex-col items-center">
-          <label className="text-xs text-blue-600 font-medium">B</label>
+          <label className="text-sm text-blue-500 font-medium">B</label>
           <input
             type="number"
             min="0"
             max="255"
             value={color.b}
             onChange={(e) => handleRGBChange('b', e.target.value)}
-            className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded text-center"
+            className="w-12 px-1 py-0.5 text-sm border border-border-primary rounded text-center"
           />
         </div>
       </div>
