@@ -10,10 +10,14 @@
 }
 
 @layer {
+  body {
+    color: white;
+  }
+
   input {
     @apply bg-bg-primary
   }
-  
+
   .background {
     @apply fixed bg-bg-primary backdrop-blur-lg border border-border-primary rounded-md p-4;
   }
@@ -30,10 +34,6 @@
     -moz-appearance: textfield;
   }
   
-  * {
-    @apply text-white
-  }
-
   button {
     @apply bg-bg-primary hover:bg-bg-primary-hover-light hover:cursor-pointer
   }

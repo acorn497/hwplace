@@ -4,6 +4,7 @@ import Canvas from "./components/Canvas";
 import Toolbar from "./components/Toolbar";
 import StatusPanel from "./components/StatusPanel";
 import { Pixel } from "./components/Types";
+import Notification, { types } from "./components/Notification";
 
 // Server Pixel Data Type
 interface ServerPixel {
@@ -493,9 +494,45 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     msgRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  type NotificationType = {
+    title: string;
+    content: string;
+    method?: types;
+    duration?: number;
+  }
+
+  const [notifications, setNotifications] = useState<NotificationType[]>([
+    { title: "Welcome To HWplace!", content: "Maybe Your First Connection! :)", method: types.OK, duration: 5 },
+    { title: "Server Connection Lost", content: "Failed to Connect HWplace Live Service.", method: types.ERROR, duration: 20 },
+  ]);
+  const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
+
+  useEffect(() => {
+    setDisplayingNotification(null);
+    setDisplayingNotification(notifications[0]);
+    console.log("Setted Notification", notifications)
+  }, [notifications]);
+
+  function handleOnFinish() {
+    setNotifications((prev) => prev?.slice(1));
+    console.log("Sliced", notifications);
+  }
+
+  useEffect(() => {
+    console.log("displayChanged");
+  }, [displayingNotification]);
+
+
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    setCounter((prev) => prev + 1);
+  }, [displayingNotification]);
 
   return (
     <div className="w-full h-full">
+      {displayingNotification && <Notification key={counter} title={displayingNotification.title} content={displayingNotification.content} method={displayingNotification.method} callback={() => handleOnFinish()} duration={displayingNotification.duration} />}
+
       <div className="background top-4 right-4 z-50">
         <div className="text-sm space-y-2">
           <div className={`flex items-center gap-2 ${isConnected ? 'text-green-400' : 'text-red-600'}`}>
