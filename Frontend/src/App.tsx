@@ -220,7 +220,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
       socket.on('connect', () => {
         setIsConnected(true);
         setConnectionError(null);
-        setUnableToConnect(false)
+        setUnableToConnect(false);
       });
 
       const handleBatchPixelsUpdated = (data: BatchPixelUpdatedResponse) => {
@@ -474,7 +474,9 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     duration?: number | boolean;
   }
 
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [notifications, setNotifications] = useState<NotificationType[]>([
+    { title: "Greetings!", content: "Welcome to HWPlace.", method: types.OK, duration: 2 }
+  ]);
   const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
 
   useEffect(() => {

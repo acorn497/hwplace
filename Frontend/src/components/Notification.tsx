@@ -35,6 +35,7 @@ export default function Notification({ title, content, method = types.INFO, call
   }, []);
 
   useEffect(() => {
+    console.log("duration change detected:", duration)
     if (timer == duration && typeof duration !== 'boolean') setFadeOut(true);
     else if (!duration && typeof duration == 'boolean') setFadeOut(true);
   }, [timer, duration]);
