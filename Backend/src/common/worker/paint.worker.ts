@@ -39,9 +39,11 @@ export class PaintPixelProcess extends WorkerHost {
 
   async process(job: Job): Promise<any> {
     const pixels: PaintPixelDTO[] = Array.isArray(job.data) ? job.data : [job.data];
+    log("Pushing Pixels into Buffer...")
     this.buffer.push(...pixels);
 
     if (!this.flushScheduled && this.buffer.length >= this.WORKER_MAX_BATCH_SIZE) {
+      log("Force Flushing")
       this.flushScheduled = true;
       setImmediate(() => this.tryFlush(job.id!));
     }
@@ -50,6 +52,7 @@ export class PaintPixelProcess extends WorkerHost {
   }
 
   private async tryFlush(source: string | number): Promise<void> {
+    log("Non-Force Flushing")
     if (this.processing >= this.WORKER_MAX_CONCURRENT || this.buffer.length === 0) {
       this.flushScheduled = false;
       return;
@@ -60,11 +63,15 @@ export class PaintPixelProcess extends WorkerHost {
     let success = false;
     let retries = 0;
 
+    log(`Batch size: ${batch.length}\nRetry: ${retries}\nSuccess: ${success}\nRetry limit: ${this.WORKER_MAX_RETRY}`)
     while (retries <= this.WORKER_MAX_RETRY && !success) {
+      log(`LOOP`)
       try {
         const values = batch
           .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}')`)
           .join(', ');
+
+        log(`Working: ${values}`)
 
         await DB.$executeRawUnsafe(`
           INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID)
@@ -94,6 +101,8 @@ export class PaintPixelProcess extends WorkerHost {
         success = true;
       }
     }
+
+    log(`Loop Finished`);
 
     this.processing--;
     this.flushScheduled = false;

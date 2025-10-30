@@ -2,7 +2,7 @@ const autocannon = require('autocannon');
 const fs = require('fs');
 const pidusage = require('pidusage');
 
-const BASE_URL = 'https://port-0-hwplace-mgroz4g3d2d6b70d.sel3.cloudtype.app/';
+const BASE_URL = 'http://localhost:3000/';
 const API_PATH = 'paint';
 
 function generateRandomPixel() {

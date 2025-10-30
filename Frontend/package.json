@@ -1,7 +1,7 @@
 {
-  "name": "vite-project",
+  "name": "hwplace",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.12",
+    "axios": "^1.13.1",
     "lucide-react": "^0.548.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

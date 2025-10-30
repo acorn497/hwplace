@@ -4,8 +4,9 @@ import Canvas from "./components/Canvas";
 import Toolbar from "./components/Toolbar";
 import StatusPanel from "./components/StatusPanel";
 import { Pixel } from "./components/Types";
-import Notification, { types } from "./components/Notification";
-import { BatchPixelUpdateData, BatchPixelUpdatedResponse, MessageData, ServerPixel } from "./types";
+import Notification, { NotificationHandle, types } from "./components/Notification";
+import { BatchPixelUpdateData, BatchPixelUpdatedResponse, MessageData, NotificationType, ServerPixel } from "./types";
+import axios from "axios";
 
 
 // API Functions
@@ -23,25 +24,15 @@ const fetchPixelData = async (): Promise<ServerPixel[]> => {
 };
 
 const saveBatchPixels = async (pixels: { posX: number; posY: number; colorR: number; colorG: number; colorB: number }[]): Promise<ServerPixel[] | null> => {
-  try {
-    console.log(JSON.stringify(pixels))
-    const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/paint', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(pixels),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to save batch pixels:', error);
+  console.log(pixels);
+  return await axios.post(import.meta.env.VITE_BACKEND_URL + '/paint', pixels)
+  .then((response) => {
+    return response.data.pixels;
+  })
+  .catch((error) => {
+    console.log(error);
     return null;
-  }
+  })
 };
 
 // UUID Generate Function
@@ -190,7 +181,6 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
   // Pixel Data Update Function
   const updatePixelData = useCallback((updateFn: (prevData: Pixel[][]) => Pixel[][]) => {
-    console.log('픽셀 데이터 업데이트 시작');
     setPixelData(prev => {
       const newData = updateFn(prev);
 
@@ -203,74 +193,6 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
       return newData;
     });
   }, []);
-
-  const [unableToConnect, setUnableToConnect] = useState(false);
-
-  useEffect(() => {
-    if (unableToConnect) setNotifications((prev) => [...prev, { title: "Server Sonnection Lost", content: "현재 HWPlace Live 서비스에 연결할 수 없습니다.", method: types.ERROR, duration: unableToConnect }])
-  }, [unableToConnect])
-
-  const connectSocket = useCallback(() => {
-    try {
-      const socket = io(import.meta.env.VITE_BACKEND_URL, {
-        transports: ['websocket', 'polling'],
-      });
-      socketRef.current = socket;
-
-      socket.on('connect', () => {
-        setIsConnected(true);
-        setConnectionError(null);
-        setUnableToConnect(false);
-      });
-
-      const handleBatchPixelsUpdated = (data: BatchPixelUpdatedResponse) => {
-        updatePixelData(prev => {
-          const newData = prev.map(row => [...row]);
-          data.pixels.forEach(({ x, y, color }) => {
-            if (y >= 0 && y < height && x >= 0 && x < width) {
-              newData[y][x] = color;
-            }
-          });
-          return newData;
-        });
-      };
-
-      socket.on('batch-pixels-updated', handleBatchPixelsUpdated);
-
-      socket.on('receive-message', (data: { message: string; sender: string; timestamp: string }) => {
-        setMessages(prev => [...prev, data]);
-        msgRef.current?.scrollIntoView({ behavior: "smooth" })
-      });
-
-      socket.on('disconnect', (reason: string) => {
-        console.log('Socket.IO disconnected:', reason);
-        setIsConnected(false);
-        setIsRenewed(false);
-        if (reason !== 'io client disconnect') {
-          setConnectionError('서버와의 연결이 끊어졌습니다.');
-        }
-      });
-
-      socket.on('connect_error', () => {
-        setIsConnected(false);
-        setConnectionError('서버에 연결할 수 없습니다.');
-        setIsRenewed(false);
-        setUnableToConnect(true);
-      });
-    } catch (error) {
-      setConnectionError('소켓 연결을 생성할 수 없습니다.');
-    }
-  }, [height, width, updatePixelData]);
-
-  useEffect(() => {
-    connectSocket();
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-    };
-  }, [connectSocket]);
 
   const loadPixelData = useCallback(async () => {
     try {
@@ -306,7 +228,6 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
   useEffect(() => {
     loadPixelData();
-
   }, [loadPixelData]);
 
   const handleZoom = useCallback((delta: number, centerX?: number, centerY?: number) => {
@@ -456,54 +377,122 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleReconnect = useCallback(() => {
-    setConnectionError(null);
-    connectSocket();
-  }, [connectSocket]);
-
   const msgRef = useRef<HTMLDivElement | null>(null);
+  const [counter, setCounter] = useState(0);
+  const [unableToConnect, setUnableToConnect] = useState(false);
+  const notificationRef = useRef<NotificationHandle>(null);
+  const errorNotificationIdRef = useRef<number | null>(null);
+  const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
 
   useEffect(() => {
     msgRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  type NotificationType = {
-    title: string;
-    content: string;
-    method?: types;
-    duration?: number | boolean;
-  }
-
   const [notifications, setNotifications] = useState<NotificationType[]>([
     { title: "Greetings!", content: "Welcome to HWPlace.", method: types.OK, duration: 2 }
   ]);
-  const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
 
   useEffect(() => {
-    setDisplayingNotification(null);
     setDisplayingNotification(notifications[0]);
-    console.log("Setted Notification", notifications)
+    console.log(notifications)
   }, [notifications]);
 
   function handleOnFinish() {
     setNotifications((prev) => prev?.slice(1));
-    console.log("Sliced", notifications);
+    setDisplayingNotification(null);
   }
-
-  useEffect(() => {
-    console.log("displayChanged");
-  }, [displayingNotification]);
-
-
-  const [counter, setCounter] = useState(0);
 
   useEffect(() => {
     setCounter((prev) => prev + 1);
   }, [displayingNotification]);
 
+  useEffect(() => {
+    console.log("unableToConnect, DisplayingNotification")
+    if (unableToConnect && displayingNotification?.id !== errorNotificationIdRef.current) {
+      errorNotificationIdRef.current = 503;
+      setNotifications((prev) => [...prev, { id: 503, title: "Server Connection Lost", content: "현재 HWPlace Live 서비스에 연결할 수 없습니다.", method: types.ERROR, duration: Infinity }]);
+    } else if (!unableToConnect && displayingNotification?.id === errorNotificationIdRef.current) {
+      // setNotifications((prev) => [...prev, { title: "Server Connection Established", content: "HWPlace Live 서비스와 연결되었습니다.", method: types.INFO, duration: 2 }]);
+      notificationRef.current?.triggerClose();
+      errorNotificationIdRef.current = null;
+    }
+  }, [unableToConnect, displayingNotification]);
+
+  useEffect(() => {
+    console.log("unableToConnect: " + unableToConnect)
+  }, [unableToConnect])
+
+  const connectSocket = useCallback(() => {
+    try {
+      const socket = io(import.meta.env.VITE_BACKEND_URL, {
+        transports: ['websocket', 'polling'],
+      });
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        setIsConnected(true);
+        setConnectionError(null);
+        setUnableToConnect(false);
+      });
+
+      const handleBatchPixelsUpdated = (data: BatchPixelUpdatedResponse) => {
+        updatePixelData(prev => {
+          const newData = prev.map(row => [...row]);
+          data.pixels.forEach(({ x, y, color }) => {
+            if (y >= 0 && y < height && x >= 0 && x < width) {
+              newData[y][x] = color;
+            }
+          });
+          return newData;
+        });
+      };
+
+      socket.on('batch-pixels-updated', handleBatchPixelsUpdated);
+
+      socket.on('receive-message', (data: { message: string; sender: string; timestamp: string }) => {
+        setMessages(prev => [...prev, data]);
+        msgRef.current?.scrollIntoView({ behavior: "smooth" })
+      });
+
+      socket.on('disconnect', (reason: string) => {
+        console.log('Socket.IO disconnected:', reason);
+        setIsConnected(false);
+        setIsRenewed(false);
+        if (reason !== 'io client disconnect') {
+          setConnectionError('서버와의 연결이 끊어졌습니다.');
+        }
+      });
+
+      socket.on('connect_error', () => {
+        setIsConnected(false);
+        setConnectionError('서버에 연결할 수 없습니다.');
+        setIsRenewed(false);
+        setUnableToConnect(true);
+        console.log("connect_error called");
+      });
+    } catch (error) {
+      setConnectionError('소켓 연결을 생성할 수 없습니다.');
+    }
+  }, [height, width, updatePixelData]);
+
+  useEffect(() => {
+    connectSocket();
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [connectSocket]);
+
+  const handleReconnect = useCallback(() => {
+    setConnectionError(null);
+    connectSocket();
+  }, [connectSocket]);
+
   return (
     <div className="w-full h-full">
-      {displayingNotification && <Notification key={counter} title={displayingNotification.title} content={displayingNotification.content} method={displayingNotification.method} callback={() => handleOnFinish()} duration={displayingNotification.duration} />}
+      {displayingNotification && <Notification key={counter} title={displayingNotification.title} content={displayingNotification.content} method={displayingNotification.method} callback={() => handleOnFinish()} duration={displayingNotification.duration} ref={notificationRef} />}
 
       <div className="background top-4 right-4 z-50">
         <div className="text-sm space-y-2">
