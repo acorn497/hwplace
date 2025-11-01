@@ -25,7 +25,6 @@ export class PaintController {
         name: 'paint pixel', data: body.slice(i, i + BATCH_SIZE), opts:
           { priority: 1, attempts: 3, backoff: { type: 'exponential', delay: 1000 }, removeOnComplete: true, removeOnFail: false }
       })
-
     }
     await this.paintPixelQueue.addBulk(jobs);
 

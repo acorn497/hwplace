@@ -39,11 +39,9 @@ export class PaintPixelProcess extends WorkerHost {
 
   async process(job: Job): Promise<any> {
     const pixels: PaintPixelDTO[] = Array.isArray(job.data) ? job.data : [job.data];
-    log("Pushing Pixels into Buffer...")
     this.buffer.push(...pixels);
 
     if (!this.flushScheduled && this.buffer.length >= this.WORKER_MAX_BATCH_SIZE) {
-      log("Force Flushing")
       this.flushScheduled = true;
       setImmediate(() => this.tryFlush(job.id!));
     }
@@ -52,7 +50,6 @@ export class PaintPixelProcess extends WorkerHost {
   }
 
   private async tryFlush(source: string | number): Promise<void> {
-    log("Non-Force Flushing")
     if (this.processing >= this.WORKER_MAX_CONCURRENT || this.buffer.length === 0) {
       this.flushScheduled = false;
       return;
@@ -63,15 +60,11 @@ export class PaintPixelProcess extends WorkerHost {
     let success = false;
     let retries = 0;
 
-    log(`Batch size: ${batch.length}\nRetry: ${retries}\nSuccess: ${success}\nRetry limit: ${this.WORKER_MAX_RETRY}`)
     while (retries <= this.WORKER_MAX_RETRY && !success) {
-      log(`LOOP`)
       try {
         const values = batch
           .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}')`)
           .join(', ');
-
-        log(`Working: ${values}`)
 
         await DB.$executeRawUnsafe(`
           INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID)
@@ -83,7 +76,7 @@ export class PaintPixelProcess extends WorkerHost {
         `);
 
         this.broadcast(batch);
-        log(`[Batch:${source}] ${batch.length} pixels OK (retry: ${retries})`, 200);
+        log(`${batch.length} pixels OK`, 200);
         success = true;
       } catch (err: any) {
         const isDeadlock = err.code === 'P2010' && err.meta?.code === '1213';
@@ -91,18 +84,16 @@ export class PaintPixelProcess extends WorkerHost {
         if (isDeadlock && retries < this.WORKER_MAX_RETRY) {
           retries++;
           const delay = 5 * retries;
-          log(`[Batch:${source}] Deadlock → retry ${retries}/${this.WORKER_MAX_RETRY} after ${delay}ms`, 400, 'ERROR');
+          log(`Deadlock → retry ${retries}/${this.WORKER_MAX_RETRY} after ${delay}ms`, 400, 'ERROR');
           await new Promise(r => setTimeout(r, delay));
           continue;
         }
 
-        log(`[Batch:${source}] FAILED after ${retries} retries. Restoring ${batch.length} pixels`, 500, 'ERROR');
+        log(`FAILED after ${retries} retries. Restoring ${batch.length} pixels`, 500, 'ERROR');
         this.buffer.unshift(...batch);
         success = true;
       }
     }
-
-    log(`Loop Finished`);
 
     this.processing--;
     this.flushScheduled = false;
