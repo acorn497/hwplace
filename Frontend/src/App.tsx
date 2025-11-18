@@ -10,6 +10,23 @@ import axios from "axios";
 
 
 // API Functions
+const fetchCanvasInfo = async (): Promise<{ sizeX: number; sizeY: number } | null> => {
+  try {
+    const response = await fetch(import.meta.env.VITE_BACKEND_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return {
+      sizeX: data.canvasInfo.sizeX,
+      sizeY: data.canvasInfo.sizeY
+    };
+  } catch (error) {
+    console.error('Failed to fetch canvas info:', error);
+    return null;
+  }
+};
+
 const fetchPixelData = async (): Promise<ServerPixel[]> => {
   try {
     const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/paint');
@@ -26,13 +43,13 @@ const fetchPixelData = async (): Promise<ServerPixel[]> => {
 const saveBatchPixels = async (pixels: { posX: number; posY: number; colorR: number; colorG: number; colorB: number }[]): Promise<ServerPixel[] | null> => {
   console.log(pixels);
   return await axios.post(import.meta.env.VITE_BACKEND_URL + '/paint', pixels)
-  .then((response) => {
-    return response.data.pixels;
-  })
-  .catch((error) => {
-    console.log(error);
-    return null;
-  })
+    .then((response) => {
+      return response.data.pixels;
+    })
+    .catch((error) => {
+      console.log(error);
+      return null;
+    })
 };
 
 // UUID Generate Function
@@ -45,12 +62,13 @@ const generateUUID = () => {
 };
 
 const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: string }> = ({
-  width = 500,
-  height = 500,
+  width: initialWidth = 500,
+  height: initialHeight = 500,
 }) => {
+  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
   const [pixelSize, setPixelSize] = useState(20);
-  const [offsetX, setOffsetX] = useState(600 - (width * 20) / 2);
-  const [offsetY, setOffsetY] = useState(400 - (height * 20) / 2);
+  const [offsetX, setOffsetX] = useState(600 - (initialWidth * 20) / 2);
+  const [offsetY, setOffsetY] = useState(400 - (initialHeight * 20) / 2);
   const [mousePixelPos, setMousePixelPos] = useState<{ x: number; y: number } | null>(null);
   const [pinnedPositions, setPinnedPositions] = useState<{ x: number; y: number }[]>([]);
   const [isGridActive, setIsGridActive] = useState(true);
@@ -77,14 +95,33 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
   // Reset Pixel Datas
   const [pixelData, setPixelData] = useState<Pixel[][]>(() =>
-    Array.from({ length: height }, () =>
-      Array.from({ length: width }, () => ({ r: 255, g: 255, b: 255 }))
+    Array.from({ length: initialHeight }, () =>
+      Array.from({ length: initialWidth }, () => ({ r: 255, g: 255, b: 255 }))
     )
   );
 
   const [selectedColor, setSelectedColor] = useState<Pixel>({ r: 255, g: 0, b: 0 });
   const [favoriteColors, setFavoriteColors] = useState<Pixel[]>([]);
   const [isPickFromCanvas, setIsPickFromCanvas] = useState(false);
+
+  // Load canvas size first
+  useEffect(() => {
+    const loadCanvasSize = async () => {
+      const size = await fetchCanvasInfo();
+      if (size) {
+        setCanvasSize({ width: size.sizeX, height: size.sizeY });
+        setOffsetX(600 - (size.sizeX * 20) / 2);
+        setOffsetY(400 - (size.sizeY * 20) / 2);
+      } else {
+        // Fallback to initial values
+        setCanvasSize({ width: initialWidth, height: initialHeight });
+      }
+    };
+    loadCanvasSize();
+  }, [initialWidth, initialHeight]);
+
+  const width = canvasSize?.width ?? initialWidth;
+  const height = canvasSize?.height ?? initialHeight;
 
   // LocalStorage - load persisted states once on mount
   useEffect(() => {
@@ -195,6 +232,8 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   }, []);
 
   const loadPixelData = useCallback(async () => {
+    if (!canvasSize) return;
+
     try {
       setIsLoadingData(true);
       console.log('픽셀 데이터 로드 중...');
@@ -202,13 +241,13 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
       setIsConnected(serverPixels.length <= 0 ? false : true);
 
       updatePixelData(() => {
-        const newPixelData: Pixel[][] = Array.from({ length: height }, () =>
-          Array.from({ length: width }, () => ({ r: 255, g: 255, b: 255 }))
+        const newPixelData: Pixel[][] = Array.from({ length: canvasSize.height }, () =>
+          Array.from({ length: canvasSize.width }, () => ({ r: 255, g: 255, b: 255 }))
         );
 
         serverPixels.forEach(pixel => {
           const { PIXEL_POS_X: x, PIXEL_POS_Y: y, PIXEL_COLOR_R: r, PIXEL_COLOR_G: g, PIXEL_COLOR_B: b } = pixel;
-          if (y >= 0 && y < height && x >= 0 && x < width) {
+          if (y >= 0 && y < canvasSize.height && x >= 0 && x < canvasSize.width) {
             newPixelData[y][x] = { r, g, b };
           }
         });
@@ -224,11 +263,13 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
     } finally {
       setIsLoadingData(false);
     }
-  }, [width, height, updatePixelData]);
+  }, [canvasSize, updatePixelData]);
 
   useEffect(() => {
-    loadPixelData();
-  }, [loadPixelData]);
+    if (canvasSize) {
+      loadPixelData();
+    }
+  }, [loadPixelData, canvasSize]);
 
   const handleZoom = useCallback((delta: number, centerX?: number, centerY?: number) => {
     const newPixelSize = Math.max(1, Math.min(50, pixelSize + delta));
@@ -385,7 +426,9 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   const [displayingNotification, setDisplayingNotification] = useState<NotificationType | null>(null);
 
   useEffect(() => {
-    msgRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (msgRef.current) {
+      msgRef.current.scrollTop = msgRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const [notifications, setNotifications] = useState<NotificationType[]>([
@@ -412,7 +455,7 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
       errorNotificationIdRef.current = 503;
       setNotifications((prev) => [...prev, { id: 503, title: "Server Connection Lost", content: "현재 HWPlace Live 서비스에 연결할 수 없습니다.", method: types.ERROR, duration: Infinity }]);
     } else if (!unableToConnect && displayingNotification?.id === errorNotificationIdRef.current) {
-      // setNotifications((prev) => [...prev, { title: "Server Connection Established", content: "HWPlace Live 서비스와 연결되었습니다.", method: types.INFO, duration: 2 }]);
+      setNotifications((prev) => [...prev, { title: "Server Connection Established", content: "HWPlace Live 서비스와 연결되었습니다.", method: types.INFO, duration: 2 }]);
       notificationRef.current?.triggerClose();
       errorNotificationIdRef.current = null;
     }
@@ -451,7 +494,6 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
 
       socket.on('receive-message', (data: { message: string; sender: string; timestamp: string }) => {
         setMessages(prev => [...prev, data]);
-        msgRef.current?.scrollIntoView({ behavior: "smooth" })
       });
 
       socket.on('disconnect', (reason: string) => {
@@ -476,19 +518,33 @@ const SimpleCanvasPan: React.FC<{ width?: number; height?: number; roomId?: stri
   }, [height, width, updatePixelData]);
 
   useEffect(() => {
-    connectSocket();
+    if (canvasSize) {
+      connectSocket();
+    }
 
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
       }
     };
-  }, [connectSocket]);
+  }, [connectSocket, canvasSize]);
 
   const handleReconnect = useCallback(() => {
     setConnectionError(null);
     connectSocket();
   }, [connectSocket]);
+
+  // Don't render until canvas size is loaded
+  if (!canvasSize) {
+    return (
+      <div className="w-full h-full">
+        {displayingNotification && <Notification key={counter} title={displayingNotification.title} content={displayingNotification.content} method={displayingNotification.method} callback={() => handleOnFinish()} duration={displayingNotification.duration} ref={notificationRef} />}
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-white">캔버스 정보를 불러오는 중...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">
