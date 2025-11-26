@@ -67,10 +67,21 @@ Remain    : ${this.server.sockets.sockets.size}
             }
           });
 
+          const formattedPixels = pixels.map(pixel => {
+            return {
+              posX: pixel.PIXEL_POS_X,
+              posY: pixel.PIXEL_POS_Y,
+              colorR: pixel.PIXEL_COLOR_R,
+              colorG: pixel.PIXEL_COLOR_G,
+              colorB: pixel.PIXEL_COLOR_B,
+              uuid: pixel.PIXEL_UUID
+            }
+          })
+
           this.server.emit('chunk_data', {
             chunkX: cx,
             chunkY: cy,
-            pixels: pixels,
+            pixels: formattedPixels,
           })
         }
       }
