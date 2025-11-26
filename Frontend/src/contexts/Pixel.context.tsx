@@ -26,6 +26,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const pixels = useRef(new Map<string, Pixel>())
 
   useEffect(() => {
+    // 청크 정보 수신
     socket.on("chunk_start", (data) => {
       setCanvasStatus(CanvasStatus.LOADING);
       setTotalChunk(data.chunkWidth * data.chunkHeight);
@@ -33,15 +34,18 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       setChunkHeight(data.chunkHeight);
     });
 
+    // 청크 수신
     socket.on("chunk_data", (data: Chunk) => {
       setLoadedChunk(prev => prev + 1);
-      console.log(data)
-      data.pixels.forEach((pixel: Pixel) => {
 
+      data.pixels.forEach((pixel: Pixel) => {
+        const key = `${pixel.posX}-${pixel.posY}`;
+        pixels.current.set(key, pixel);
       });
     });
 
     socket.on("chunk_finish", () => {
+      console.log(pixels.current);
       setCanvasStatus(CanvasStatus.FINISHED);
     });
 
@@ -57,7 +61,9 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
     canvasWidth, canvasHeight,
 
     chunkWidth, chunkHeight,
-    loadedChunk, totalChunk
+    loadedChunk, totalChunk,
+
+    pixels,
   }
 
   return (

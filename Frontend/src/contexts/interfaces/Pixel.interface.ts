@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import type { CanvasStatus } from "../enums/CanvasStatus.enum";
 
 export interface Pixel {
@@ -21,4 +22,6 @@ export interface PixelContext {
   chunkHeight: number,
   totalChunk: number,
   loadedChunk: number,
+
+  pixels: RefObject<Map<string, Pixel>> 
 }
