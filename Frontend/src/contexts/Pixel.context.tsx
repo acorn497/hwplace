@@ -1,31 +1,14 @@
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
-import { useSocket } from "./SocketContext";
+import { createContext, useContext, useEffect, useRef, useState, type PropsWithChildren } from "react";
+import { useSocket } from "./Socket.context";
+import type { Chunk } from "./interfaces/Chunk.interface";
+import { CanvasStatus } from "./enums/CanvasStatus.enum";
+import type { Pixel, PixelContext } from "./interfaces/Pixel.interface";
 
-const PixelContext = createContext<PixelInterface | undefined>(undefined);
-
-export enum CanvasStatusEnum {
-  INITIALIZING = "캔버스 초기화 중...",
-  LOADING = "청크 데이터 불러오는 중...",
-  FINISHED = "로드 완료됨!",
-}
-
-interface PixelInterface {
-  canvasStatus: CanvasStatusEnum,
-  setCanvasStatus: (parameter: CanvasStatusEnum) => void,
-
-  canvasWidth: number,
-  canvasHeight: number,
-
-  chunkWidth: number,
-  chunkHeight: number,
-  totalChunk: number,
-  loadedChunk: number,
-
-}
+const PixelContext = createContext<PixelContext | undefined>(undefined);
 
 export const PixelProvider = ({ children }: PropsWithChildren) => {
   const { socket } = useSocket();
-  const [canvasStatus, setCanvasStatus] = useState(CanvasStatusEnum.INITIALIZING);
+  const [canvasStatus, setCanvasStatus] = useState(CanvasStatus.INITIALIZING);
 
   // 픽셀 개수
   const [canvasWidth, setCanvasWidth] = useState<number>(0);
@@ -37,26 +20,29 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const [totalChunk, setTotalChunk] = useState<number>(0);
   const [loadedChunk, setLoadedChunk] = useState(0);
 
-  const { connectionStatus } = useSocket();
+  /**
+   * 픽셀 데이터
+  **/
+  const pixels = useRef(new Map<string, Pixel>())
 
   useEffect(() => {
-    // if (!(connectionStatus === ConnectionStatusEnum.ESTABLISHED)) return;
-
     socket.on("chunk_start", (data) => {
-      setCanvasStatus(CanvasStatusEnum.LOADING);
-      setTotalChunk(data.chunkSize)
+      setCanvasStatus(CanvasStatus.LOADING);
+      setTotalChunk(data.chunkWidth * data.chunkHeight);
       setChunkWidth(data.chunkWidth);
       setChunkHeight(data.chunkHeight);
     });
 
-    socket.on("chunk_data", (data) => {
-      setLoadedChunk((data.chunkX + 1) * (data.chunkY + 1));
+    socket.on("chunk_data", (data: Chunk) => {
+      setLoadedChunk(prev => prev + 1);
       console.log(data)
+      data.pixels.forEach((pixel: Pixel) => {
+
+      });
     });
 
-
     socket.on("chunk_finish", () => {
-      setCanvasStatus(CanvasStatusEnum.FINISHED);
+      setCanvasStatus(CanvasStatus.FINISHED);
     });
 
     return () => {
@@ -64,9 +50,9 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       socket.off("chunk_data");
       socket.off("chunk_finish");
     };
-  }, [connectionStatus]);
+  }, []);
 
-  const value = {
+  const value: PixelContext = {
     canvasStatus, setCanvasStatus,
     canvasWidth, canvasHeight,
 

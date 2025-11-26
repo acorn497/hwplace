@@ -1,29 +1,17 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
-import { io, Socket } from "socket.io-client";
-
-interface SocketInterface {
-  socket: Socket,
-
-  connectionStatus: ConnectionStatusEnum,
-  setConnectionStatus: (parameter: ConnectionStatusEnum) => void,
-}
+import { io } from "socket.io-client";
+import { ConnectionStatus } from "./enums/ConnectionStatus.enum";
+import type { SocketContext } from "./interfaces/Socket.interface";
 
 const socket = io(`${import.meta.env.VITE_BACKEND_URL}`, {
   transports: ["websocket"],
   autoConnect: false,
 });
 
-const SocketContext = createContext<SocketInterface | undefined>(undefined);
-
-export enum ConnectionStatusEnum {
-  CONNECTING = "CONNECTING",
-  ESTABLISHED = "ESTABLISHED",
-  DISCONNECTED = "DISCONNECTED",
-  FAILED = "FAILED",
-}
+const SocketContext = createContext<SocketContext | undefined>(undefined);
 
 export const SocketProvider = ({ children }: PropsWithChildren) => {
-  const [connectionStatus, setConnectionStatus] = useState(ConnectionStatusEnum.CONNECTING);
+  const [connectionStatus, setConnectionStatus] = useState(ConnectionStatus.CONNECTING);
 
   useEffect(() => {
     setTimeout(() => {
@@ -31,22 +19,22 @@ export const SocketProvider = ({ children }: PropsWithChildren) => {
     }, 1500);
 
     socket.on("connect", () => {
-      setConnectionStatus(ConnectionStatusEnum.ESTABLISHED);
+      setConnectionStatus(ConnectionStatus.ESTABLISHED);
       console.log("소켓 연결됨:", socket.id);
     });
 
     socket.on("disconnect", (reason) => {
-      setConnectionStatus(ConnectionStatusEnum.DISCONNECTED);
+      setConnectionStatus(ConnectionStatus.DISCONNECTED);
       console.log("소켓 연결 끊김:", reason);
     });
 
     socket.on("connect_error", (error) => {
-      setConnectionStatus(ConnectionStatusEnum.FAILED);
+      setConnectionStatus(ConnectionStatus.FAILED);
       console.error("소켓 연결 실패:", error);
     });
 
     socket.on("reconnect_attempt", () => {
-      setConnectionStatus(ConnectionStatusEnum.CONNECTING);
+      setConnectionStatus(ConnectionStatus.CONNECTING);
       console.log("재연결 시도 중...");
     });
 
@@ -59,7 +47,7 @@ export const SocketProvider = ({ children }: PropsWithChildren) => {
     };
   }, []);
 
-  const value: SocketInterface = {
+  const value: SocketContext = {
     socket: socket,
     connectionStatus, setConnectionStatus
   };

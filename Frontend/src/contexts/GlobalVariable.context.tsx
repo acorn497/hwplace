@@ -1,22 +1,13 @@
 import { createContext, useContext, useState, type PropsWithChildren } from "react";
+import type { GlobalVariable} from "./interfaces/GlobalVariable.interface";
+import { View } from "./enums/View.enum";
 
-enum ViewEnum {
-  INTRO = "INTRO",
-  CANVAS = "CANVAS",
-  FATAL = "FATAL",
-}
-
-interface GlobalVariableInterface {
-  currentView: ViewEnum;
-  setCurrentView: (view: ViewEnum) => void;
-}
-
-const GlobalVariableContext = createContext<GlobalVariableInterface | undefined>(undefined);
+const GlobalVariableContext = createContext<GlobalVariable | undefined>(undefined);
 
 export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
-  const [currentView, setCurrentView] = useState<ViewEnum>(ViewEnum.INTRO);
+  const [currentView, setCurrentView] = useState<View>(View.INTRO);
 
-  const value: GlobalVariableInterface = {
+  const value: GlobalVariable = {
     currentView, setCurrentView,
   };
 

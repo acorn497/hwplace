@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { useSocket } from "../../contexts/SocketContext";
-import { usePixel } from "../../contexts/PixelContext";
+import { useSocket } from "../../contexts/Socket.context";
+import { usePixel } from "../../contexts/Pixel.context";
 
 export const Intro = () => {
   const [loadingPercentage, setLoadingPercentage] = useState(0);
@@ -28,8 +28,7 @@ export const Intro = () => {
   useEffect(() => {
     if (!totalChunk) return;
     setLoadingMessage(canvasStatus + "(" + loadedChunk + "/" + totalChunk + ")");
-    setLoadingPercentage(10 + (loadedChunk / totalChunk) * 70);
-    console.log(loadedChunk / totalChunk)
+    setLoadingPercentage(10 + (loadedChunk / totalChunk) * 75);
   }, [canvasStatus, loadedChunk, totalChunk])
 
   return (
