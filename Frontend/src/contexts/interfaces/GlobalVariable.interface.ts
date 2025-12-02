@@ -1,0 +1,23 @@
+import { Tool } from "../enums/Tool.enum";
+import { View } from "../enums/View.enum";
+
+export interface GlobalVariable {
+  currentView: View;
+  setCurrentView: (view: View) => void;
+
+  activeTool: Tool;
+  setActiveTool: (tool: Tool) => void;
+
+  zoom: number;
+  setZoom: (zoom: number) => void;
+
+
+  username: string;
+  setUsername: (username: string) => void;
+
+  email: string;
+  setEmail: (email: string) => void;
+
+  accessToken: string;
+  setAccessToken: (accessToken: string) => void;
+}

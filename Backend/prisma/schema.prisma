@@ -18,3 +18,12 @@ model pixel {
 
   @@unique([PIXEL_POS_X, PIXEL_POS_Y], map: "unique_pixel")
 }
+
+model user {
+  USER_INDEX      Int     @id @default(autoincrement())
+  USER_DISPLAY    String  @db.VarChar(16)
+  USER_EMAIL      String  @db.VarChar(255)
+  USER_PASSWORD   String  @db.VarChar(255)
+  USER_RESTRICTED Boolean @default(false)
+  USER_PAINTED    Int     @default(0)
+}
