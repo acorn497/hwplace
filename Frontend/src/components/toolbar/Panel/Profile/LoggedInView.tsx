@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGlobalVariable } from "../../../../contexts/GlobalVariable.context";
 import { Titlebox } from "../../../common/Titlebox";
+import { Button } from "../../../common/Button";
 
 export const LoggedInView = () => {
   const { username, email, accessToken, setAccessToken, setUsername, setEmail } = useGlobalVariable();
@@ -57,6 +58,7 @@ export const LoggedInView = () => {
             >
               {copied ? '✓' : '복사'}
             </button>
+            <Button display={copied ? '✓' : 'Copy'} hint="토큰을 클립보드에 복사합니다." />
           </div>
         </Titlebox>
       </div>

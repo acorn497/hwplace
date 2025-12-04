@@ -5,27 +5,9 @@ import { FetchMethod, useFetch } from "../hooks/useFetch";
 import { CanvasStatus } from "./enums/CanvasStatus.enum";
 import { useCanvas } from "./Canvas.context";
 import { useGlobalVariable } from "./GlobalVariable.context";
+import { PixelPositionContextType } from "./interfaces/PixelPosition.interface";
+import { Pixel, PixelContextType } from "./interfaces/Pixel.interface";
 
-interface Pixel {
-  posX: number;
-  posY: number;
-  colorR: number;
-  colorG: number;
-  colorB: number;
-  uuid: string;
-}
-
-interface PixelContextType {
-  pixelLoadStatus: PixelLoadStatus;
-  loadedChunk: number;
-  totalChunk: number;
-  chunkWidth: number;
-  chunkHeight: number;
-  chunkSize: number;
-  pixels: Map<string, Pixel>; // key: "x,y"
-  getPixel: (x: number, y: number) => Pixel | undefined;
-  setPixel: (x: number, y: number, pixel: Pixel) => void;
-}
 
 const PixelContext = createContext<PixelContextType | undefined>(undefined);
 
@@ -34,16 +16,18 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const { setCanvasStatus } = useCanvas();
 
   const [pixelLoadStatus, setPixelLoadStatus] = useState<PixelLoadStatus>(PixelLoadStatus.INITIALIZING);
+
   const [loadedChunk, setLoadedChunk] = useState<number>(0);
   const [totalChunk, setTotalChunk] = useState<number>(0);
   const [chunkWidth, setChunkWidth] = useState<number>(0);
   const [chunkHeight, setChunkHeight] = useState<number>(0);
   const [chunkSize, setChunkSize] = useState<number>(0);
-  const [pixels, setPixels] = useState<Map<string, Pixel>>(new Map());
   const receivedChunksRef = useRef<Set<number>>(new Set());
 
-  const { setVersion } = useGlobalVariable();
+  const [pixels, setPixels] = useState<Map<string, Pixel>>(new Map());
+  const [selectedPixels, setSelectedPixels] = useState<PixelPositionContextType[]>([]);
 
+  const { setVersion } = useGlobalVariable();
   const { setCanvasSizeX, setCanvasSizeY } = useCanvas();
 
   useEffect(() => {
@@ -127,6 +111,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
     pixels,
     getPixel,
     setPixel,
+    selectedPixels, setSelectedPixels
   };
 
   return (

@@ -1,15 +1,14 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
-import type { GlobalVariable } from "./interfaces/GlobalVariable.interface";
+import type { GlobalVariableContextType } from "./interfaces/GlobalVariable.interface";
 import { Tool } from "./enums/Tool.enum";
 import { View } from "./enums/View.enum";
 import { FetchMethod, useFetch } from "../hooks/useFetch";
 
-const GlobalVariableContext = createContext<GlobalVariable | undefined>(undefined);
+const GlobalVariableContext = createContext<GlobalVariableContextType | undefined>(undefined);
 
 export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
   const [currentView, setCurrentView] = useState<View>(View.INTRO);
   const [activeTool, setActiveTool] = useState<Tool>(Tool.NONE);
-  const [zoom, setZoom] = useState(1);
 
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
@@ -34,10 +33,9 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
     }
   }, [])
 
-  const value: GlobalVariable = {
+  const value: GlobalVariableContextType = {
     currentView, setCurrentView,
     activeTool, setActiveTool,
-    zoom, setZoom,
 
     username, setUsername,
     email, setEmail,

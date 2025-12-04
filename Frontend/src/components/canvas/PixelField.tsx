@@ -1,33 +1,18 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { usePixel } from "../../contexts/Pixel.context";
 import { PixelLoadStatus } from "../../contexts/enums/PixelLoadStatus.enum";
 import { useCanvas } from "../../contexts/Canvas.context";
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { useKeyboardShortcut } from "../../hooks/useKeyboardShortcut";
 import { Tool } from "../../contexts/enums/Tool.enum";
-
-interface PixelPosition {
-  x: number,
-  y: number,
-}
-
-enum DragMode {
-  NONE = "NONE",
-  SELECT = "SELECT",
-  CANCEL = "CANCEL"
-}
+import { DragMode } from "../../contexts/enums/DragMode.enum";
 
 export const PixelField = () => {
   const canvasBaseRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const { pixels, pixelLoadStatus } = usePixel();
-  const { setLoadedPixel } = useCanvas();
-  const { zoom, setZoom, activeTool } = useGlobalVariable();
-  const [selectedPixels, setSelectedPixels] = useState<PixelPosition[]>([]);
-
-  const [cursor, setCursor] = useState<PixelPosition>({ x: 0, y: 0 });
-  const [dragMode, setDragMode] = useState<DragMode>(DragMode.NONE);
-  const [isLeftDown, setIsLeftDown] = useState(false);
+  const { pixels, pixelLoadStatus, selectedPixels, setSelectedPixels } = usePixel();
+  const { setLoadedPixel, zoom, setZoom, dragMode, setDragMode, isLeftDown, setIsLeftDown, cursorPosition, setCursorPosition } = useCanvas();
+  const { activeTool } = useGlobalVariable();
 
   /**
    * 픽셀 선택/해제
@@ -36,7 +21,7 @@ export const PixelField = () => {
   const handleMouseClick = () => {
     if (activeTool !== Tool.BRUSH) return;
 
-    const selectedPosition = { x: cursor.x, y: cursor.y };
+    const selectedPosition = { x: cursorPosition.x, y: cursorPosition.y };
     if (isSelected(selectedPosition)) cancelPixel(selectedPosition);
     else selectPixel(selectedPosition);
   }
@@ -48,12 +33,12 @@ export const PixelField = () => {
 
   const selectPixel = (selectedPosition: { x: number, y: number }) => {
     if (selectedPixels.findIndex(targetPixel => targetPixel.x === selectedPosition.x && targetPixel.y === selectedPosition.y) !== -1) return;
-    setSelectedPixels(prev => [...prev, { x: cursor.x, y: cursor.y }]);
+    setSelectedPixels([...selectedPixels, { x: cursorPosition.x, y: cursorPosition.y }]);
   }
 
   const cancelPixel = (selectedPosition: { x: number, y: number }) => {
     if (selectedPixels.findIndex(targetPixel => targetPixel.x === selectedPosition.x && targetPixel.y === selectedPosition.y) == -1) return;
-    setSelectedPixels(prev => prev.filter(targetPixel => (targetPixel.x !== selectedPosition.x || targetPixel.y !== selectedPosition.y)));
+    setSelectedPixels(selectedPixels.filter(targetPixel => (targetPixel.x !== selectedPosition.x || targetPixel.y !== selectedPosition.y)));
   }
 
   // ==========================================
@@ -103,18 +88,18 @@ export const PixelField = () => {
     if (activeTool !== Tool.BRUSH || dragMode === DragMode.NONE || !isLeftDown) return;
     switch (dragMode) {
       case DragMode.SELECT:
-        selectPixel({ x: cursor.x, y: cursor.y });
+        selectPixel({ x: cursorPosition.x, y: cursorPosition.y });
         break;
       case DragMode.CANCEL:
-        cancelPixel({ x: cursor.x, y: cursor.y });
+        cancelPixel({ x: cursorPosition.x, y: cursorPosition.y });
         break;
     }
-  }, [cursor, dragMode])
+  }, [cursorPosition, dragMode])
 
   useEffect(() => {
     if (!canvasRef.current) return;
     const handleMouseMove = (event: MouseEvent) => {
-      setCursor({ x: Math.floor(event.layerX / zoom), y: Math.floor(event.layerY / zoom) })
+      setCursorPosition({ x: Math.floor(event.layerX / zoom), y: Math.floor(event.layerY / zoom) })
     }
 
     canvasRef.current.addEventListener('mousemove', handleMouseMove);
@@ -126,24 +111,17 @@ export const PixelField = () => {
         canvasRef.current.removeEventListener('click', handleMouseClick);
       }
     }
-  }, [canvasRef.current, zoom, cursor, selectedPixels]);
+  }, [canvasRef.current, zoom, cursorPosition, selectedPixels]);
 
   return (
     <>
-      <div className="fixed top-1/2 left-1/2 z-0 -translate-1/2 pointer-events-none">
-        <span>Cursor Position</span><br />
-        <span>X: {cursor.x}</span><br />
-        <span>Y: {cursor.y}</span><br />
-        <span>DRAG: {dragMode}</span><br />
-        <span>LEFT: {isLeftDown ? "True" : "False"}</span>
-      </div>
       <div className="w-screen h-screen overflow-hidden">
         <div ref={canvasBaseRef} className="absolute top-1/2 left-1/2 -translate-1/2" style={{ width: 1000 * zoom, height: 1000 * zoom }}>
           <canvas ref={canvasRef} className="border -translate-1/2 absolute top-1/2 left-1/2" width={1000 * zoom} height={1000 * zoom}>
 
           </canvas>
           <div>
-            <div className="absolute z-10 transition-normal duration-80 ease-out pointer-events-none" style={{ transform: `translate(${zoom * cursor.x}px,${zoom * (cursor.y)}px)`, width: zoom, height: zoom, border: `${1 / zoom}px solid black` }} />
+            <div className="absolute z-10 transition-normal duration-80 ease-out pointer-events-none" style={{ transform: `translate(${zoom * cursorPosition.x}px,${zoom * (cursorPosition.y)}px)`, width: zoom, height: zoom, border: `${1 / zoom}px solid black` }} />
             {selectedPixels.map((selection, index) => <div key={index} className="absolute pointer-events-none z-1" style={{ transform: `translate(${(zoom * selection.x)}px,${(zoom * selection.y)}px)`, border: '1px solid green', width: `${zoom}px`, height: `${zoom}px` }} />)}
           </div>
         </div>

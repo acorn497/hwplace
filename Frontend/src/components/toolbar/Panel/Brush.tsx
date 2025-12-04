@@ -1,18 +1,16 @@
 import { useGlobalVariable } from "../../../contexts/GlobalVariable.context";
 import { Tool } from "../../../contexts/enums/Tool.enum";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RgbColorPicker } from "./Brush/ColorPicker";
 import { Titlebox } from "../../common/Titlebox";
 import { Button } from "../../common/Button";
+import { useCanvas } from "../../../contexts/Canvas.context";
 
 export const Brush = () => {
   const { setActiveTool, accessToken } = useGlobalVariable();
+  const { cursorPosition, dragMode, isLeftDown } = useCanvas();
 
   const [currentColor, setCurrentColor] = useState({ r: 0, g: 106, b: 106 });
-
-  useEffect(() => {
-
-  }, [currentColor])
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -54,11 +52,11 @@ export const Brush = () => {
               <Button display="칠하기" hint="선택된 구역을 칠합니다." keybind="Enter" />
             </div>
           </div>
-          <div className="">
-
-          </div>
-          <div>
-
+          <div className="flex flex-col gap-1 text-xs text-slate-600 font-mono p-2 bg-slate-50 rounded border border-slate-200">
+            <div className="font-semibold text-slate-700 mb-1">Debug Info</div>
+            <div>Cursor: ({cursorPosition.x}, {cursorPosition.y})</div>
+            <div>Drag Mode: {dragMode}</div>
+            <div>Left Button: {isLeftDown ? "Down" : "Up"}</div>
           </div>
         </section>
 

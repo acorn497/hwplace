@@ -1,19 +1,7 @@
 import { createContext, useContext, useState, type PropsWithChildren } from "react";
 import { CanvasStatus } from "./enums/CanvasStatus.enum";
-
-interface CanvasContextType {
-  canvasStatus: CanvasStatus;
-  setCanvasStatus: (status: CanvasStatus) => void;
-
-  canvasSizeX: number;
-  setCanvasSizeX: (sizeX: number) => void;
-
-  canvasSizeY: number;
-  setCanvasSizeY: (sizeY: number) => void;
-
-  loadedPixel: number;
-  setLoadedPixel: (count: number) => void;
-}
+import { DragMode } from "./enums/DragMode.enum";
+import { CanvasContextType } from "./interfaces/Canvas.interface";
 
 const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
 
@@ -24,11 +12,22 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
   const [canvasSizeY, setCanvasSizeY] = useState(0);  
   const [loadedPixel, setLoadedPixel] = useState(0);
 
+  const [zoom, setZoom] = useState(1);
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [dragMode, setDragMode] = useState<DragMode>(DragMode.NONE);
+  const [isLeftDown, setIsLeftDown] = useState(false);
+
   const value: CanvasContextType = {
     canvasStatus, setCanvasStatus,
     canvasSizeX, setCanvasSizeX,
     canvasSizeY, setCanvasSizeY,
     loadedPixel, setLoadedPixel,
+
+    zoom, setZoom,
+    cursorPosition, setCursorPosition,
+    dragMode, setDragMode,
+    isLeftDown, setIsLeftDown,
+
   };
 
   return (
