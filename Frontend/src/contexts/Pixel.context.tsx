@@ -12,7 +12,7 @@ import { Pixel, PixelContextType } from "./interfaces/Pixel.interface";
 const PixelContext = createContext<PixelContextType | undefined>(undefined);
 
 export const PixelProvider = ({ children }: PropsWithChildren) => {
-  const { socket, isConnected } = useSocket();
+  const { socket } = useSocket();
   const { setCanvasStatus } = useCanvas();
 
   const [pixelLoadStatus, setPixelLoadStatus] = useState<PixelLoadStatus>(PixelLoadStatus.INITIALIZING);
@@ -31,7 +31,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const { setCanvasSizeX, setCanvasSizeY } = useCanvas();
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket) return;
 
     // 이벤트 리스너 등록
     socket.on('chunk_start', (data) => {
@@ -107,7 +107,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       socket.off('chunk_finish');
       socket.off('batch-pixels-updated');
     };
-  }, [socket, isConnected]);
+  }, [socket]);
 
   const getPixel = (x: number, y: number): Pixel | undefined => {
     const key = `${x},${y}`;
