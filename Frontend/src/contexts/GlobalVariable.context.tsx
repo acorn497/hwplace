@@ -16,13 +16,14 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      (async () => {
-        useFetch(FetchMethod.GET, '/ping').then(response => {
-          if (!response) return;
-          setPing(Date.now() - response.data.timestamp);
-          setTotalBatchedPixelCount(response.data.totalBatchedPixelCount);
-        });
-      })();
+      const startTime = Date.now();
+
+      useFetch(FetchMethod.GET, '/ping').then(response => {
+        if (!response) return;
+        const endTime = Date.now(); 
+        setPing(endTime - startTime);
+        setTotalBatchedPixelCount(response.data.totalBatchedPixelCount);
+      });
     }, 1000);
 
     return () => {
