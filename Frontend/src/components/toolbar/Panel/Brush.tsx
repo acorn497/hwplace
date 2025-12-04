@@ -51,7 +51,7 @@ export const Brush = () => {
           <div className="flex">
             <div className="w-15 h-15 rounded-md border border-primary-border shadow-sm" style={{ backgroundColor: `rgb(${currentColor.r},${currentColor.g},${currentColor.b})` }} />
             <div className="flex-1  h-15">
-              <Button display="칠하기" hint="선택된 구역을 칠합니다." keybind="Shift + Enter" />
+              <Button display="칠하기" hint="선택된 구역을 칠합니다." keybind="Enter" />
             </div>
           </div>
           <div className="">

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { uptime } from 'process';
 import pkg from "../package.json"
 import { GlobalResponse } from './common/global/global-response.dto';
+import DB from './util/db.util';
 
 @Injectable()
 export class AppService {
@@ -31,7 +32,33 @@ export class AppService {
         totalSize: parseInt(this.configService.get("CANVAS_SIZE_X") ?? "500") * parseInt(this.configService.get("CANVAS_SIZE_Y") ?? "500"),
       }
     }
-    
+
+    return response;
+  }
+
+  async ping() {
+    const response: GlobalResponse = {};
+    response.title = "pong";
+
+    const totalBatchedPixelCount = await DB.pixel.findMany({
+      select: {
+        PIXEL_INDEX: true,
+      },
+      orderBy: {
+        PIXEL_INDEX: 'desc',
+      },
+      take: 1,
+    }).then(response => {
+      return response[0].PIXEL_INDEX ?? 0;
+    }).catch(() => {
+      return 0;
+    });
+
+    response.data = {
+      timestamp: Date.now(),
+      totalBatchedPixelCount: totalBatchedPixelCount,
+    }
+
     return response;
   }
 }

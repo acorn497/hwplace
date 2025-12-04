@@ -1,7 +1,10 @@
 import { Activity, Globe, Palette, Users, Zap } from "lucide-react"
+import { useCanvas } from "../../../contexts/Canvas.context"
+import { useGlobalVariable } from "../../../contexts/GlobalVariable.context";
 
 export const Service = () => {
-
+  const { canvasSizeX, canvasSizeY } = useCanvas();
+  const { ping, totalBatchedPixelCount, version } = useGlobalVariable();
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -22,7 +25,7 @@ export const Service = () => {
             <Zap className="w-4 h-4" />
             <span className="text-xs font-medium">지연시간</span>
           </div>
-          <div className="text-xl font-bold text-slate-800">14 ms</div>
+          <div className="text-xl font-bold text-slate-800">{ping} ms</div>
         </div>
 
         {/* 접속자 */}
@@ -31,7 +34,7 @@ export const Service = () => {
             <Users className="w-4 h-4" />
             <span className="text-xs font-medium">연결된 사용자 수</span>
           </div>
-          <div className="text-xl font-bold text-slate-800">4</div>
+          <div className="text-xl font-bold text-slate-800">-</div>
         </div>
 
         {/* 캔버스 크기 */}
@@ -40,7 +43,7 @@ export const Service = () => {
             <Palette className="w-4 h-4" />
             <span className="text-xs font-medium">캔버스 크기</span>
           </div>
-          <div className="text-xl font-bold text-slate-800">1000 x 1000</div>
+          <div className="text-xl font-bold text-slate-800">{canvasSizeX} x {canvasSizeY}</div>
         </div>
 
         {/* 칠해진 픽셀 */}
@@ -49,7 +52,7 @@ export const Service = () => {
             <Activity className="w-4 h-4" />
             <span className="text-xs font-medium">지금까지 배치된 픽셀 수</span>
           </div>
-          <div className="text-xl font-bold text-slate-800">141,203</div>
+          <div className="text-xl font-bold text-slate-800">{totalBatchedPixelCount}</div>
         </div>
 
         {/* 버전 - 전체 너비 */}
@@ -58,7 +61,7 @@ export const Service = () => {
             <Globe className="w-4 h-4" />
             <span className="text-xs font-medium">UI / 서비스 버전</span>
           </div>
-          <div className="text-sm font-medium text-slate-800">v2.0.0-preview</div>
+          <div className="text-sm font-medium text-slate-800">{version}</div>
         </div>
       </div>
     </div>

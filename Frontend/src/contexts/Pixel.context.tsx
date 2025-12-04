@@ -4,6 +4,7 @@ import { useSocket } from "./Socket.context";
 import { FetchMethod, useFetch } from "../hooks/useFetch";
 import { CanvasStatus } from "./enums/CanvasStatus.enum";
 import { useCanvas } from "./Canvas.context";
+import { useGlobalVariable } from "./GlobalVariable.context";
 
 interface Pixel {
   posX: number;
@@ -41,6 +42,8 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const [pixels, setPixels] = useState<Map<string, Pixel>>(new Map());
   const receivedChunksRef = useRef<Set<number>>(new Set());
 
+  const { setVersion } = useGlobalVariable();
+
   const { setCanvasSizeX, setCanvasSizeY } = useCanvas();
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       setChunkSize(data.chunkSize);
       setTotalChunk(data.chunkWidth * data.chunkHeight);
       setLoadedChunk(0);
-      receivedChunksRef.current.clear(); 
+      receivedChunksRef.current.clear();
       setPixelLoadStatus(PixelLoadStatus.LOADING);
     });
 
@@ -86,6 +89,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
 
     (async () => {
       const result = await useFetch(FetchMethod.GET, '/');
+      setVersion(result.data.version);
       setCanvasSizeX(result.data.canvasInfo.sizeX);
       setCanvasSizeY(result.data.canvasInfo.sizeY);
     })();

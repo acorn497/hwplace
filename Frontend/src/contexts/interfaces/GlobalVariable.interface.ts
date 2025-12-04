@@ -20,4 +20,14 @@ export interface GlobalVariable {
 
   accessToken: string;
   setAccessToken: (accessToken: string) => void;
+
+
+  ping: number;
+  setPing: (ping: number) => void;
+
+  totalBatchedPixelCount: number;
+  setTotalBatchedPixelCount: (ping: number) => void;
+
+  version: string;
+  setVersion: (version: string) => void;
 }
