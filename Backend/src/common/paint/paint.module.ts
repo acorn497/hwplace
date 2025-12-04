@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PaintController } from './paint.controller';
 import { PaintService } from './paint.service';
-import { WebsocketModule } from '../websocket/websocket.module';
+import { WebsocketModule } from './websocket/websocket.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({

@@ -1,40 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: rgba(40, 40, 40, 0.5);
-  --color-bg-primary-hover: rgba(0, 0, 0, 0.5);
-  --color-bg-primary-hover-light: rgba(30, 30, 30, 0.15);
-
-  --color-border-primary: rgba(90, 90, 90, 1);
-  --color-border-primary-active: rgba(120, 120, 255, 1)
+  --color-primary-text: #1d293d;
+  --color-primary-border: color-mix(in oklab, var(--color-slate-900) /* oklch(20.8% 0.042 265.755) = #0f172b */ 10%, transparent);
 }
 
-@layer {
-  body {
-    color: white;
-  }
-
-  input {
-    @apply bg-bg-primary
-  }
-
-  .background {
-    @apply fixed bg-bg-primary backdrop-blur-lg border border-border-primary rounded-md p-4;
-  }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-@layer base {
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  
-  input[type="number"] {
-    -moz-appearance: textfield;
-  }
-  
-  button {
-    @apply bg-bg-primary hover:bg-bg-primary-hover-light hover:cursor-pointer
-  }
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+
+/*
+ ========== FONTS ==============================
+*/
+
+@font-face {
+    font-family: 'Aritta';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/Arita-dotum-Medium.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+.aritta-font {
+  font-family: 'Aritta', sans-serif;
+}
+
+@font-face {
+    font-family: 'Joseon';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGs.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+.joseon-font {
+  font-family: 'Joseon', sans-serif;
 }

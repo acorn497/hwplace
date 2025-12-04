@@ -1,5 +1,3 @@
-import { types } from "../components/Notification";
-
 // Server Pixel Data Type
 export interface ServerPixel {
   PIXEL_INDEX: number;
@@ -35,12 +33,4 @@ export interface BatchPixelUpdatedResponse {
 export interface MessageData {
   message: string;
   sender: string;
-}
-
-export type NotificationType = {
-  id?: number;
-  title: string;
-  content: string;
-  method?: types;
-  duration?: number;
 }

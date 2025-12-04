@@ -1,17 +1,18 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import DB from "src/util/db.util";
-import { PaintPixelDTO } from "../paint/dtos/paint.dto";
+import { PaintPixelDTO } from "../dtos/paint.dto";
 import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { randomUUID } from "crypto";
 import log from "spectra-log";
 import { ConfigService } from "@nestjs/config";
+import { JobType, JobWithUserType } from "../job.interface";
 
 @Processor('paint-pixel', {
   concurrency: 6,
 })
 export class PaintPixelProcess extends WorkerHost {
-  private buffer: PaintPixelDTO[] = [];
+  private buffer: JobType[] = [];
   private flushScheduled = false;
   private processing = 0;
   private WORKER_BATCH_TIMEOUT: number;
@@ -38,43 +39,37 @@ export class PaintPixelProcess extends WorkerHost {
   }
 
   async process(job: Job): Promise<any> {
-    const pixels: PaintPixelDTO[] = Array.isArray(job.data) ? job.data : [job.data];
-    log("Pushing Pixels into Buffer...")
-    this.buffer.push(...pixels);
+    this.buffer.push(job);
 
     if (!this.flushScheduled && this.buffer.length >= this.WORKER_MAX_BATCH_SIZE) {
-      log("Force Flushing")
       this.flushScheduled = true;
       setImmediate(() => this.tryFlush(job.id!));
     }
 
-    return { buffered: pixels.length };
+    return { buffered: job.data.pixels.length };
   }
 
   private async tryFlush(source: string | number): Promise<void> {
-    log("Non-Force Flushing")
     if (this.processing >= this.WORKER_MAX_CONCURRENT || this.buffer.length === 0) {
       this.flushScheduled = false;
       return;
     }
 
     this.processing++;
-    const batch = this.buffer.splice(0, this.WORKER_MAX_BATCH_SIZE);
+    const batch = this.buffer.pop();
+    if (!batch) return;
+
     let success = false;
     let retries = 0;
 
-    log(`Batch size: ${batch.length}\nRetry: ${retries}\nSuccess: ${success}\nRetry limit: ${this.WORKER_MAX_RETRY}`)
     while (retries <= this.WORKER_MAX_RETRY && !success) {
-      log(`LOOP`)
       try {
-        const values = batch
-          .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}')`)
+        const values = batch.data.pixels
+          .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}', ${p.userIndex})`)
           .join(', ');
 
-        log(`Working: ${values}`)
-
         await DB.$executeRawUnsafe(`
-          INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID)
+          INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID, PIXEL_PAINTED_BY)
           VALUES ${values}
           ON DUPLICATE KEY UPDATE
             PIXEL_COLOR_R = VALUES(PIXEL_COLOR_R),
@@ -82,8 +77,8 @@ export class PaintPixelProcess extends WorkerHost {
             PIXEL_COLOR_B = VALUES(PIXEL_COLOR_B)
         `);
 
-        this.broadcast(batch);
-        log(`[Batch:${source}] ${batch.length} pixels OK (retry: ${retries})`, 200);
+        this.broadcast(batch.data.pixels);
+        log(`${batch.data.pixels.length} pixels OK`, 200);
         success = true;
       } catch (err: any) {
         const isDeadlock = err.code === 'P2010' && err.meta?.code === '1213';
@@ -91,18 +86,16 @@ export class PaintPixelProcess extends WorkerHost {
         if (isDeadlock && retries < this.WORKER_MAX_RETRY) {
           retries++;
           const delay = 5 * retries;
-          log(`[Batch:${source}] Deadlock → retry ${retries}/${this.WORKER_MAX_RETRY} after ${delay}ms`, 400, 'ERROR');
+          log(`Deadlock → retry ${retries}/${this.WORKER_MAX_RETRY} after ${delay}ms`, 400, 'ERROR');
           await new Promise(r => setTimeout(r, delay));
           continue;
         }
 
-        log(`[Batch:${source}] FAILED after ${retries} retries. Restoring ${batch.length} pixels`, 500, 'ERROR');
-        this.buffer.unshift(...batch);
+        log(`FAILED after ${retries} retries. Restoring ${batch.data.pixels.length} pixels`, 500, 'ERROR');
+        this.buffer.unshift(batch);
         success = true;
       }
     }
-
-    log(`Loop Finished`);
 
     this.processing--;
     this.flushScheduled = false;
