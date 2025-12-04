@@ -25,10 +25,10 @@ export class PaintPixelProcess extends WorkerHost {
     private readonly configService: ConfigService,
   ) {
     super();
-    this.WORKER_MAX_BATCH_SIZE = configService.get<number>("WORKER_MAX_BATCH_SIZE") ?? 100;
-    this.WORKER_BATCH_TIMEOUT = configService.get<number>("WORKER_BATCH_TIMEOUT") ?? 10;
-    this.WORKER_MAX_CONCURRENT = configService.get<number>("WORKER_MAX_CONCURRENT") ?? 6;
-    this.WORKER_MAX_RETRY = configService.get<number>("WORKER_MAX_RETRY") ?? 3;
+    this.WORKER_MAX_BATCH_SIZE = this.configService.get<number>("WORKER_MAX_BATCH_SIZE") ?? 500;
+    this.WORKER_BATCH_TIMEOUT = this.configService.get<number>("WORKER_BATCH_TIMEOUT") ?? 10;
+    this.WORKER_MAX_CONCURRENT = this.configService.get<number>("WORKER_MAX_CONCURRENT") ?? 6;
+    this.WORKER_MAX_RETRY = this.configService.get<number>("WORKER_MAX_RETRY") ?? 3;
 
     setInterval(() => {
       if (this.buffer.length > 0 && !this.flushScheduled) {
