@@ -26,9 +26,7 @@ function App() {
   }, [pixelLoadStatus])
 
   useEffect(() => {
-    console.log("FLAG!");
     if (canvasStatus === CanvasStatus.FINISHED) {
-      console.log("FLAG2!~")
       setTimeout(() => {
         setDisplayIntro(false);
       }, ttl)

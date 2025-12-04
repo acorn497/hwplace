@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type PropsWithChildren } from "react";
+import { createContext, useContext, useState, useEffect, useRef, type PropsWithChildren } from "react";
 import { PixelLoadStatus } from "./enums/PixelLoadStatus.enum";
 import { useSocket } from "./Socket.context";
 import { FetchMethod, useFetch } from "../hooks/useFetch";
@@ -39,6 +39,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const [chunkHeight, setChunkHeight] = useState<number>(0);
   const [chunkSize, setChunkSize] = useState<number>(0);
   const [pixels, setPixels] = useState<Map<string, Pixel>>(new Map());
+  const receivedChunksRef = useRef<Set<number>>(new Set());
 
   const { setCanvasSizeX, setCanvasSizeY } = useCanvas();
 
@@ -53,11 +54,12 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       setChunkSize(data.chunkSize);
       setTotalChunk(data.chunkWidth * data.chunkHeight);
       setLoadedChunk(0);
+      receivedChunksRef.current.clear(); 
       setPixelLoadStatus(PixelLoadStatus.LOADING);
     });
 
     socket.on('chunk_data', (data) => {
-      console.log(`Received chunk (${data.chunkX}, ${data.chunkY}) with ${data.pixels.length} pixels`);
+      console.log(`Received chunk ${data.chunkNumber}(${data.chunkX}, ${data.chunkY}) with ${data.pixels.length} pixels`);
 
       setPixels((prevPixels) => {
         const newPixels = new Map(prevPixels);
@@ -68,13 +70,18 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
         return newPixels;
       });
 
-      setLoadedChunk((prev) => prev + 1);
+      // 실제 받은 청크 개수 추적
+      receivedChunksRef.current.add(data.chunkNumber);
+      setLoadedChunk(receivedChunksRef.current.size);
     });
 
     socket.on('chunk_finish', () => {
       console.log('Chunk loading finished');
       setPixelLoadStatus(PixelLoadStatus.FINISHED);
-      setCanvasStatus(CanvasStatus.DRAWING);
+      setTimeout(() => {
+        // 캔버스 픽셀 렌더링 시작 시그널
+        setCanvasStatus(CanvasStatus.DRAWING);
+      }, 1250);
     });
 
     (async () => {

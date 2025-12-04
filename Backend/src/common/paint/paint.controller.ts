@@ -1,9 +1,10 @@
-import { Body, Controller, Get, ParseArrayPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, ParseArrayPipe, Post, UseGuards } from '@nestjs/common';
 import { PaintService } from './paint.service';
 import { PaintPixelDTO, PaintPixelsDTO } from './dtos/paint.dto';
 import { JobsOptions, Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '../auth/guard/jwt.guard';
 
 @Controller('paint')
 export class PaintController {
@@ -15,6 +16,7 @@ export class PaintController {
     private readonly paintPixelQueue: Queue,
   ) { };
 
+  @UseGuards(AuthGuard)
   @Post()
   async paintPixel(@Body(new ParseArrayPipe({ items: PaintPixelDTO })) body: PaintPixelDTO[]) {
     const BATCH_SIZE = this.configService.get<number>("WORKER_BATCH_SIZE") ?? 100;

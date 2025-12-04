@@ -32,23 +32,23 @@ export const Intro = () => {
   }, []);
 
   //
-  // 청크 로딩 구역 (10% ~ 70%)
+  // 청크 로딩 구역 (10% ~ 90%)
   //
   useEffect(() => {
     if (!totalChunk) return;
     setLoadingMessage(pixelLoadStatus + "(" + loadedChunk + "/" + totalChunk + ")");
-    setLoadingPercentage(10 + (loadedChunk / totalChunk) * 70);
+    setLoadingPercentage(10 + (loadedChunk / totalChunk) * 80);
   }, [pixelLoadStatus, loadedChunk, totalChunk]);
 
   //
-  // 픽셀 렌더링 구력 (70% ~ 100%)
+  // 픽셀 렌더링 구력 (90% ~ 100%)
   //
   useEffect(() => {
     if (canvasStatus === CanvasStatus.WAITING || loadingPercentage === 100) return;
-    console.log("FLAG: " + canvasStatus)
-    setLoadingMessage(canvasStatus + "(" + loadedPixel + "/" + pixels.size + ")")
-    setLoadingPercentage(80 + (loadedPixel / pixels.size) * 20);
-  }, [canvasStatus, loadedPixel])
+    setLoadingMessage(canvasStatus + "(" + loadedPixel + "/" + pixels.size + ")");
+    if (!pixels.size) setLoadingPercentage(100);
+    else setLoadingPercentage(90 + (loadedPixel / pixels.size) * 10);
+  }, [canvasStatus, loadedPixel, pixels])
 
   useEffect(() => {
     if (loadingPercentage >= 100) {

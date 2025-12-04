@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
+import { FetchMethod, useFetch } from "../../../../hooks/useFetch";
 
 const TOTAL_PHASE = 2;
 
@@ -7,9 +8,9 @@ export const RegisterForm = ({ setActive }: {
   setActive: (parameter: string) => void
 }) => {
   const [phase, setPhase] = useState(0);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [enteredEmail, setEnteredEmail] = useState("");
+  const [enteredPassword, setEnteredPassword] = useState("");
+  const [enteredPasswordConfirm, setEnteredPasswordConfirm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const passwordConfirmInputRef = useRef<HTMLInputElement>(null);
@@ -27,9 +28,18 @@ export const RegisterForm = ({ setActive }: {
   }, [phase])
 
   const handleSubmit = async () => {
-    setIsLoading(true)
-    // TODO: 회원가입 API 호출
-    console.log("Login:", { email, password })
+    setIsLoading(true);
+
+    const result = await useFetch(FetchMethod.POST, '/auth/register', {
+      email: enteredEmail,
+      password: enteredPassword,
+    });
+
+    if (!result.internalStatusCode?.toString().match("0000")) {
+      console.log("Failed To Register.");
+      setIsLoading(false);
+      return;
+    }
 
     setTimeout(() => {
       setIsLoading(false)
@@ -40,22 +50,22 @@ export const RegisterForm = ({ setActive }: {
     e.preventDefault()
 
     if (phase === 1) {
-      if (!password) return;
+      if (!enteredPassword) return;
     }
 
     if (phase === 2) {
-      if (password !== passwordConfirm) return;
+      if (enteredPassword !== enteredPasswordConfirm) return;
       handleSubmit();
       return;
     }
 
-    if (phase === 0 && !email) return
+    if (phase === 0 && !enteredEmail) return
     setPhase(prev => prev + 1)
   }
 
   const handleBack = () => {
     setPhase(prev => prev - 1)
-    setPassword("")
+    setEnteredPassword("")
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -75,12 +85,12 @@ export const RegisterForm = ({ setActive }: {
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                className="p-1 hover:bg-slate-100 rounded-md transition-colors"
                 aria-label="뒤로 가기"
               >
                 <ChevronLeft className="w-5 h-5 text-slate-600" />
               </button>
-              <div className="text-sm text-slate-600 truncate">{email}</div>
+              <div className="text-sm text-slate-600 truncate">{enteredEmail}</div>
             </div>
             : <div className="h-2" />
           }
@@ -91,8 +101,8 @@ export const RegisterForm = ({ setActive }: {
               <input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={enteredEmail}
+                onChange={(e) => setEnteredEmail(e.target.value)}
                 className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
                 placeholder="email@example.com"
                 required
@@ -109,8 +119,8 @@ export const RegisterForm = ({ setActive }: {
                 ref={passwordInputRef}
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={enteredPassword}
+                onChange={(e) => setEnteredPassword(e.target.value)}
                 className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
                 placeholder="••••••••••••"
                 required
@@ -127,8 +137,8 @@ export const RegisterForm = ({ setActive }: {
                 ref={passwordConfirmInputRef}
                 id="password"
                 type="password"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
+                value={enteredPasswordConfirm}
+                onChange={(e) => setEnteredPasswordConfirm(e.target.value)}
                 className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
                 placeholder="••••••••••••"
                 required
@@ -154,7 +164,7 @@ export const RegisterForm = ({ setActive }: {
           <button
             type="button"
             onClick={handleNext}
-            disabled={isLoading || (phase === 0 && !email) || (phase === TOTAL_PHASE && !password)}
+            disabled={isLoading || (phase === 0 && !enteredEmail) || (phase === TOTAL_PHASE && !enteredPassword)}
             className="px-2 py-2 w-17 h-9 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 active:bg-cyan-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md"
           >
             {isLoading ? "..." : phase === TOTAL_PHASE ? "회원가입" : "다음"}

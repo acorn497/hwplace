@@ -91,6 +91,7 @@ Remain    : ${this.server.sockets.sockets.size}
             // 다시 한번 연결 확인 후 emit
             if (this.loadingClients.get(client.id)) {
               client.emit('chunk_data', {
+                chunkNumber: cy * CHUNK_COUNT_X + cx,
                 chunkX: cx,
                 chunkY: cy,
                 pixels: formattedPixels,

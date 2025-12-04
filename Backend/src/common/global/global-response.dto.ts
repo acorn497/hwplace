@@ -3,4 +3,5 @@ export interface GlobalResponse {
   message?: string,
   data?: Object,
   internalStatusCode?: number[] | number | string[] | string,
+  timestamp?: Date,
 }

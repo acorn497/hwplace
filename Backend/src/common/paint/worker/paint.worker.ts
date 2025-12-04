@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import DB from "src/util/db.util";
-import { PaintPixelDTO } from "../paint/dtos/paint.dto";
+import { PaintPixelDTO } from "../dtos/paint.dto";
 import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { randomUUID } from "crypto";
 import log from "spectra-log";
