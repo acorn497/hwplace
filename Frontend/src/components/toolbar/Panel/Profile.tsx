@@ -1,9 +1,9 @@
 import { LoggedOutView } from "./Profile/LoggedOutView";
 import { LoggedInView } from "./Profile/LoggedInView";
-import { useGlobalVariable } from "../../../contexts/GlobalVariable.context";
+import { useAuth } from "../../../contexts/Auth.context";
 
 export const Profile = () => {
-  const { accessToken } = useGlobalVariable();
+  const { accessToken } = useAuth();
 
   return (
     <div className="flex flex-col gap-3 h-full">

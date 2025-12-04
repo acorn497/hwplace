@@ -71,6 +71,28 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       }, 1250);
     });
 
+    socket.on('batch-pixels-updated', (data: { pixels: Array<{ x: number, y: number, color: { r: number, g: number, b: number } }> }) => {
+      console.log(`Received batch update: ${data.pixels.length} pixels`);
+
+      setPixels((previousPixels) => {
+        const updatedPixels = new Map(previousPixels);
+        data.pixels.forEach((pixelUpdate) => {
+          const key = `${pixelUpdate.x},${pixelUpdate.y}`;
+          const existingPixel = previousPixels.get(key);
+
+          updatedPixels.set(key, {
+            posX: pixelUpdate.x,
+            posY: pixelUpdate.y,
+            colorR: pixelUpdate.color.r,
+            colorG: pixelUpdate.color.g,
+            colorB: pixelUpdate.color.b,
+            uuid: existingPixel?.uuid || ''
+          });
+        });
+        return updatedPixels;
+      });
+    });
+
     (async () => {
       const result = await useFetch(FetchMethod.GET, '/');
       setVersion(result.data.version);
@@ -83,6 +105,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       socket.off('chunk_start');
       socket.off('chunk_data');
       socket.off('chunk_finish');
+      socket.off('batch-pixels-updated');
     };
   }, [socket, isConnected]);
 

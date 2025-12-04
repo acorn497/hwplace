@@ -1,8 +1,11 @@
+import { useAuth } from "../../../contexts/Auth.context";
 import { useGlobalVariable } from "../../../contexts/GlobalVariable.context"
 import { Tool } from "../../../contexts/enums/Tool.enum";
 
 export const Chat = () => {
-  const { setActiveTool, accessToken } = useGlobalVariable();
+  const { setActiveTool } = useGlobalVariable();
+  const { accessToken } = useAuth();
+
   return (
     <div className="flex flex-col gap-3 h-full">
       {/* 헤더 */}

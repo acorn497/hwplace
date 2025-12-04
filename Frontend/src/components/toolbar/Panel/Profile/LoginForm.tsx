@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { ChevronLeft } from "lucide-react"
 import { FetchMethod, useFetch } from "../../../../hooks/useFetch"
-import { useGlobalVariable } from "../../../../contexts/GlobalVariable.context";
+import { useAuth } from "../../../../contexts/Auth.context";
 
 export const LoginForm = ({ setActive }: { setActive: (parameter: string) => void }) => {
   const [phase, setPhase] = useState(0);
@@ -10,7 +10,7 @@ export const LoginForm = ({ setActive }: { setActive: (parameter: string) => voi
   const [isLoading, setIsLoading] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  const { setEmail, setUsername, setAccessToken } = useGlobalVariable();
+  const { setEmail, setUsername, setAccessToken } = useAuth();
 
   // Phase 전환 시 자동 포커스
   useEffect(() => {

@@ -57,27 +57,66 @@ export const PixelField = () => {
     }
   }, []);
 
-  useKeyboardShortcut("K", () => setZoom(Math.round(zoom - 1)));
-  useKeyboardShortcut("I", () => setZoom(Math.round(zoom + 1)));
+  useKeyboardShortcut("K", () => { setZoom(Math.round(zoom - 1 > 0 ? zoom - 1 : zoom)); isInitialRenderRef.current = true; });
+  useKeyboardShortcut("I", () => { setZoom(Math.round(zoom + 1)); isInitialRenderRef.current = true; });
 
   useKeyboardShortcut("Shift", () => setDragMode(dragMode === DragMode.SELECT ? DragMode.NONE : DragMode.SELECT));
   useKeyboardShortcut("Ctrl", () => setDragMode(dragMode === DragMode.CANCEL ? DragMode.NONE : DragMode.CANCEL));
 
+  const previousPixelsRef = useRef<Map<string, { colorR: number, colorG: number, colorB: number }>>(new Map());
+  const isInitialRenderRef = useRef(true);
+
   useEffect(() => {
     if (pixelLoadStatus !== PixelLoadStatus.FINISHED) return;
-    console.log("rendering...")
+
     const canvas = canvasRef.current;
-    if (canvas) {
-      const context = canvas?.getContext('2d');
-      if (context) {
-        let index = 0;
-        pixels.forEach((pixel) => {
-          context.fillStyle = `rgb(${pixel.colorR},${pixel.colorG},${pixel.colorB})`;
-          context.fillRect(pixel.posX * zoom, pixel.posY * zoom, zoom, zoom);
-          index++;
-          setLoadedPixel(index);
-        })
+    if (!canvas) return;
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    // 초기 렌더링
+    if (isInitialRenderRef.current) {
+      console.log("Initial rendering: drawing all pixels...");
+      let index = 0;
+      pixels.forEach((pixel) => {
+        context.fillStyle = `rgb(${pixel.colorR},${pixel.colorG},${pixel.colorB})`;
+        context.fillRect(pixel.posX * zoom, pixel.posY * zoom, zoom, zoom);
+
+        const key = `${pixel.posX},${pixel.posY}`;
+        previousPixelsRef.current.set(key, { colorR: pixel.colorR, colorG: pixel.colorG, colorB: pixel.colorB });
+
+        index++;
+        setLoadedPixel(index);
+      });
+      isInitialRenderRef.current = false;
+      return;
+    }
+
+    // 업데이트
+    console.log("Incremental update: checking for changed pixels...");
+    let updatedCount = 0;
+
+    pixels.forEach((pixel) => {
+      const key = `${pixel.posX},${pixel.posY}`;
+      const previousPixel = previousPixelsRef.current.get(key);
+
+      // 새로운 픽셀이거나 색상이 변경된 경우만 다시 그리기
+      if (!previousPixel ||
+        previousPixel.colorR !== pixel.colorR ||
+        previousPixel.colorG !== pixel.colorG ||
+        previousPixel.colorB !== pixel.colorB) {
+
+        context.fillStyle = `rgb(${pixel.colorR},${pixel.colorG},${pixel.colorB})`;
+        context.fillRect(pixel.posX * zoom, pixel.posY * zoom, zoom, zoom);
+
+        previousPixelsRef.current.set(key, { colorR: pixel.colorR, colorG: pixel.colorG, colorB: pixel.colorB });
+        updatedCount++;
       }
+    });
+
+    if (updatedCount > 0) {
+      console.log(`Updated ${updatedCount} pixels`);
     }
   }, [pixels, zoom]);
 
@@ -114,18 +153,16 @@ export const PixelField = () => {
   }, [canvasRef.current, zoom, cursorPosition, selectedPixels]);
 
   return (
-    <>
-      <div className="w-screen h-screen overflow-hidden">
-        <div ref={canvasBaseRef} className="absolute top-1/2 left-1/2 -translate-1/2" style={{ width: 1000 * zoom, height: 1000 * zoom }}>
-          <canvas ref={canvasRef} className="border -translate-1/2 absolute top-1/2 left-1/2" width={1000 * zoom} height={1000 * zoom}>
+    <div className="w-screen h-screen overflow-scroll">
+      <div ref={canvasBaseRef} className="absolute top-1/2 left-1/2 -translate-1/2" style={{ width: 1000 * zoom, height: 1000 * zoom }}>
+        <canvas ref={canvasRef} className="border -translate-1/2 absolute top-1/2 left-1/2" width={1000 * zoom} height={1000 * zoom}>
 
-          </canvas>
-          <div>
-            <div className="absolute z-10 transition-normal duration-80 ease-out pointer-events-none" style={{ transform: `translate(${zoom * cursorPosition.x}px,${zoom * (cursorPosition.y)}px)`, width: zoom, height: zoom, border: `${1 / zoom}px solid black` }} />
-            {selectedPixels.map((selection, index) => <div key={index} className="absolute pointer-events-none z-1" style={{ transform: `translate(${(zoom * selection.x)}px,${(zoom * selection.y)}px)`, border: '1px solid green', width: `${zoom}px`, height: `${zoom}px` }} />)}
-          </div>
+        </canvas>
+        <div>
+          <div className="absolute z-10 transition-normal duration-80 ease-out pointer-events-none" style={{ transform: `translate(${zoom * cursorPosition.x}px,${zoom * (cursorPosition.y)}px)`, width: zoom, height: zoom, border: `${1 / zoom}px solid black` }} />
+          {selectedPixels.map((selection, index) => <div key={index} className="absolute pointer-events-none z-1" style={{ transform: `translate(${(zoom * selection.x)}px,${(zoom * selection.y)}px)`, border: '1px solid green', width: `${zoom}px`, height: `${zoom}px` }} />)}
         </div>
       </div>
-    </>
+    </div>
   )
 }

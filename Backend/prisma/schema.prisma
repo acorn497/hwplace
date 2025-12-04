@@ -8,22 +8,29 @@ datasource db {
 }
 
 model pixel {
-  PIXEL_INDEX   Int    @id @default(autoincrement())
-  PIXEL_POS_X   Int
-  PIXEL_POS_Y   Int
-  PIXEL_COLOR_R Int
-  PIXEL_COLOR_G Int
-  PIXEL_COLOR_B Int
-  PIXEL_UUID    String @db.VarChar(36) @default(uuid())
+  PIXEL_INDEX      Int       @id @default(autoincrement())
+  PIXEL_POS_X      Int
+  PIXEL_POS_Y      Int
+  PIXEL_COLOR_R    Int
+  PIXEL_COLOR_G    Int
+  PIXEL_COLOR_B    Int
+  PIXEL_UUID       String    @db.VarChar(36) @default(uuid())
+  PIXEL_PAINTED_BY Int
+  PIXEL_PAINTED_AT DateTime  @default(now())
+
+  user             user      @relation(fields: [PIXEL_PAINTED_BY], references: [USER_INDEX], onDelete: Cascade)
 
   @@unique([PIXEL_POS_X, PIXEL_POS_Y], map: "unique_pixel")
+  @@index([PIXEL_PAINTED_BY])
 }
 
 model user {
-  USER_INDEX      Int     @id @default(autoincrement())
-  USER_DISPLAY    String  @db.VarChar(16)
-  USER_EMAIL      String  @db.VarChar(255)
-  USER_PASSWORD   String  @db.VarChar(255)
-  USER_RESTRICTED Boolean @default(false)
-  USER_PAINTED    Int     @default(0)
+  USER_INDEX      Int      @id @default(autoincrement())
+  USER_DISPLAY    String   @db.VarChar(16)
+  USER_EMAIL      String   @unique @db.VarChar(255)
+  USER_PASSWORD   String   @db.VarChar(255)
+  USER_RESTRICTED Boolean  @default(false)
+  USER_PAINTED    Int      @default(0)
+
+  pixels          pixel[]
 }

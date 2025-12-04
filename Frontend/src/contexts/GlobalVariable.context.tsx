@@ -10,10 +10,6 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
   const [currentView, setCurrentView] = useState<View>(View.INTRO);
   const [activeTool, setActiveTool] = useState<Tool>(Tool.NONE);
 
-  const [username, setUsername] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [accessToken, setAccessToken] = useState<string>("");
-
   const [ping, setPing] = useState(0);
   const [totalBatchedPixelCount, setTotalBatchedPixelCount] = useState(0);
   const [version, setVersion] = useState('');
@@ -22,6 +18,7 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
     const interval = setInterval(() => {
       (async () => {
         useFetch(FetchMethod.GET, '/ping').then(response => {
+          if (!response) return;
           setPing(Date.now() - response.data.timestamp);
           setTotalBatchedPixelCount(response.data.totalBatchedPixelCount);
         });
@@ -36,10 +33,6 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
   const value: GlobalVariableContextType = {
     currentView, setCurrentView,
     activeTool, setActiveTool,
-
-    username, setUsername,
-    email, setEmail,
-    accessToken, setAccessToken,
 
     ping, setPing,
     totalBatchedPixelCount, setTotalBatchedPixelCount,

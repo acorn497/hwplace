@@ -75,7 +75,11 @@ export class AuthService {
       return response;
     }
 
-    const payload = { email: exist.USER_EMAIL, timestamp: Date.now() };
+    const payload = { 
+      index: exist.USER_INDEX,
+      email: exist.USER_EMAIL,
+      timestamp: Date.now()
+    };
 
     const token = await this.jwtService.signAsync(payload);
 

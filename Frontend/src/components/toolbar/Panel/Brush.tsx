@@ -5,12 +5,33 @@ import { RgbColorPicker } from "./Brush/ColorPicker";
 import { Titlebox } from "../../common/Titlebox";
 import { Button } from "../../common/Button";
 import { useCanvas } from "../../../contexts/Canvas.context";
+import { DragMode } from "../../../contexts/enums/DragMode.enum";
+import { usePixel } from "../../../contexts/Pixel.context";
+import { FetchMethod, useFetch } from "../../../hooks/useFetch";
+import { useAuth } from "../../../contexts/Auth.context";
 
 export const Brush = () => {
-  const { setActiveTool, accessToken } = useGlobalVariable();
+  const { setActiveTool } = useGlobalVariable();
   const { cursorPosition, dragMode, isLeftDown } = useCanvas();
+  const { selectedPixels, setSelectedPixels } = usePixel();
+  const { accessToken } = useAuth();
 
-  const [currentColor, setCurrentColor] = useState({ r: 0, g: 106, b: 106 });
+  const [currentColor, setCurrentColor] = useState({ r: 58, g: 118, b: 118 });
+
+  const handlePaintPixels = async () => {
+    if (selectedPixels.length === 0) return;
+
+    const paintRequest = selectedPixels.map(pixel => ({
+      posX: pixel.x,
+      posY: pixel.y,
+      colorR: currentColor.r,
+      colorG: currentColor.g,
+      colorB: currentColor.b
+    }));
+
+    await useFetch(FetchMethod.POST, '/paint', paintRequest);
+    setSelectedPixels([]);
+  };
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -45,18 +66,33 @@ export const Brush = () => {
 
         </section>
         {/* 상태 섹션 */}
-        <section className="grid grid-rows-2 w-full h-full">
-          <div className="flex">
+        <section className="flex flex-col gap-2 w-full h-full">
+          <div className="flex gap-2">
             <div className="w-15 h-15 rounded-md border border-primary-border shadow-sm" style={{ backgroundColor: `rgb(${currentColor.r},${currentColor.g},${currentColor.b})` }} />
-            <div className="flex-1  h-15">
-              <Button display="칠하기" hint="선택된 구역을 칠합니다." keybind="Enter" />
+            <div className="flex-1 h-15">
+              <Button display="칠하기" hint="선택된 구역을 칠합니다." keybind="Enter" callback={handlePaintPixels} />
             </div>
           </div>
-          <div className="flex flex-col gap-1 text-xs text-slate-600 font-mono p-2 bg-slate-50 rounded border border-slate-200">
-            <div className="font-semibold text-slate-700 mb-1">Debug Info</div>
-            <div>Cursor: ({cursorPosition.x}, {cursorPosition.y})</div>
-            <div>Drag Mode: {dragMode}</div>
-            <div>Left Button: {isLeftDown ? "Down" : "Up"}</div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Titlebox
+              title="DRAG MODE"
+              className={`col-span-2 transition-colors ${dragMode === DragMode.SELECT
+                ? isLeftDown ? "bg-green-100" : "bg-green-50"
+                : dragMode === DragMode.CANCEL
+                  ? isLeftDown ? "bg-red-100" : "bg-red-50"
+                  : "bg-slate-50"
+                }`}
+            >
+              {dragMode}
+            </Titlebox>
+
+            <Titlebox title="CURSOR" className="bg-slate-50">
+              ({cursorPosition.x}, {cursorPosition.y})
+            </Titlebox>
+            <Titlebox title="SELECTED" className="bg-slate-50">
+              { selectedPixels.length }
+            </Titlebox>
           </div>
         </section>
 

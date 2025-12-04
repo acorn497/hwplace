@@ -4,7 +4,7 @@ import { PixelField } from "./PixelField"
 export const Canvas = () => {
   return (
     <>
-      <div className="w-screen h-screen absolute">
+      <div className="absolute">
       <PixelField />
       </div>
       <Toolbar />

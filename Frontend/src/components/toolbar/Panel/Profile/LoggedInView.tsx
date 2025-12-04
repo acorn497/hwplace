@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useGlobalVariable } from "../../../../contexts/GlobalVariable.context";
 import { Titlebox } from "../../../common/Titlebox";
 import { Button } from "../../../common/Button";
+import { useAuth } from "../../../../contexts/Auth.context";
 
 export const LoggedInView = () => {
-  const { username, email, accessToken, setAccessToken, setUsername, setEmail } = useGlobalVariable();
+  const { username, email, accessToken, setAccessToken, setUsername, setEmail } = useAuth();
   const [copied, setCopied] = useState(false);
 
   const handleLogout = () => {

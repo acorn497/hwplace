@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsArray, IsInt, IsNotEmpty, IsNumber, Max, Min, ValidateNested } from "class-validator";
+import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, Max, Min, ValidateNested } from "class-validator";
 
 export class PaintPixelDTO {
   @IsInt()
@@ -24,6 +24,10 @@ export class PaintPixelDTO {
   @Min(0)
   @Max(255)
   colorB: number;
+
+  @IsOptional()
+  @IsInt()
+  userIndex: number;
 }
 
 export class PaintPixelsDTO {

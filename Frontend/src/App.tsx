@@ -21,7 +21,10 @@ function App() {
 
   useEffect(() => {
     if (pixelLoadStatus === PixelLoadStatus.FINISHED) {
-      setDisplayCanvas(true);
+      console.log("Loaded CANVAS")
+      setTimeout(() => {
+        setDisplayCanvas(true);
+      }, 500)
     }
   }, [pixelLoadStatus])
 

@@ -1,5 +1,5 @@
 export enum DragMode {
-  NONE = "NONE",
+  NONE = "NORMAL",
   SELECT = "SELECT",
   CANCEL = "CANCEL"
 }

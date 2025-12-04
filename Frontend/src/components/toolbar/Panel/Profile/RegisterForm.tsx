@@ -35,8 +35,10 @@ export const RegisterForm = ({ setActive }: {
       password: enteredPassword,
     });
 
+    console.log(result)
+
     if (!result.internalStatusCode?.toString().match("0000")) {
-      console.log("Failed To Register.");
+      console.log("Failed To Register");
       setIsLoading(false);
       return;
     }

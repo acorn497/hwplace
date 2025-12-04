@@ -1,5 +1,6 @@
 import { PixelLoadStatus } from "../enums/PixelLoadStatus.enum";
 import { PixelPositionContextType } from "./PixelPosition.interface";
+import { Dispatch, SetStateAction } from "react";
 
 export interface Pixel {
   posX: number;
@@ -22,5 +23,5 @@ export interface PixelContextType {
   setPixel: (x: number, y: number, pixel: Pixel) => void;
 
   selectedPixels: PixelPositionContextType[],
-  setSelectedPixels: (position: PixelPositionContextType[]) => void;
+  setSelectedPixels: Dispatch<SetStateAction<PixelPositionContextType[]>>;
 }

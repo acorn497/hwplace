@@ -8,18 +8,29 @@ export enum FetchMethod {
   DELETE = "DELETE"
 }
 
+const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_BACKEND_URL,
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  if (localStorage.getItem('accessToken')) {
+    config.headers.Authorization = `Bearer ${localStorage.getItem('accessToken')}`;
+  }
+  return config;
+})
+
 export const useFetch = async (method: FetchMethod, uri: string, data?: any): Promise<ServerResponse> => {
   const result = (async (): Promise<ServerResponse> => {
     try {
       switch (method) {
         case FetchMethod.GET:
-          return (await axios.get(import.meta.env.VITE_BACKEND_URL + uri)).data;
+          return (await axiosInstance.get(uri)).data;
         case FetchMethod.POST:
-          return (await axios.post(import.meta.env.VITE_BACKEND_URL + uri, data)).data;
+          return (await axiosInstance.post(uri, data)).data;
         case FetchMethod.PATCH:
-          return (await axios.patch(import.meta.env.VITE_BACKEND_URL + uri, data)).data;
+          return (await axiosInstance.patch(uri, data)).data;
         case FetchMethod.DELETE:
-          return (await axios.delete(import.meta.env.VITE_BACKEND_URL + uri, data)).data;
+          return (await axiosInstance.delete(uri, { data })).data;
       }
     } catch {
       return {}
