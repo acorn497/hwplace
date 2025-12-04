@@ -8,15 +8,6 @@ export interface GlobalVariableContextType {
   activeTool: Tool;
   setActiveTool: (tool: Tool) => void;
 
-  username: string;
-  setUsername: (username: string) => void;
-
-  email: string;
-  setEmail: (email: string) => void;
-
-  accessToken: string;
-  setAccessToken: (accessToken: string) => void;
-
 
   ping: number;
   setPing: (ping: number) => void;
