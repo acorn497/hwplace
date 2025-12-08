@@ -14,7 +14,6 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 
-
 # Production
 FROM node:20-alpine
 LABEL maintainer="lhw080917@gmail.com"
