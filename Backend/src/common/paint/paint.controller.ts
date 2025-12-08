@@ -1,5 +1,4 @@
 import { Body, Controller, Get, ParseArrayPipe, Post, Request, UseGuards } from '@nestjs/common';
-import { PaintService } from './paint.service';
 import { PaintPixelDTO, PaintPixelsDTO } from './dtos/paint.dto';
 import { JobsOptions, Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -10,7 +9,6 @@ import { JobType, JobWithUserType } from './job.interface';
 @Controller('paint')
 export class PaintController {
   constructor(
-    private readonly paintService: PaintService,
     private readonly configService: ConfigService,
 
     @InjectQueue('paint-pixel')
@@ -36,10 +34,5 @@ export class PaintController {
     await this.paintPixelQueue.addBulk(jobs);
 
     return { success: true, batches: Math.ceil(pixelsWithUser.length / BATCH_SIZE) }
-  }
-
-  @Get()
-  async getPixel() {
-    return this.paintService.getPixel();
   }
 }
