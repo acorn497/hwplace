@@ -3,6 +3,7 @@
 @theme {
   --color-primary-text: #1d293d;
   --color-primary-border: color-mix(in oklab, var(--color-slate-900) /* oklch(20.8% 0.042 265.755) = #0f172b */ 10%, transparent);
+  --color-primary-modal: color-mix(in oklab, var(--color-white) 75%, transparent);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
