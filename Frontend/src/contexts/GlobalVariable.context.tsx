@@ -15,16 +15,24 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
   const [version, setVersion] = useState('');
 
   useEffect(() => {
+    const startTime = Date.now();
+
+    useFetch(FetchMethod.GET, '/ping').then(response => {
+      if (!response) return;
+      const endTime = Date.now();
+      setPing(endTime - startTime);
+      setTotalBatchedPixelCount(response.data.totalBatchedPixelCount);
+    });
     const interval = setInterval(() => {
       const startTime = Date.now();
 
       useFetch(FetchMethod.GET, '/ping').then(response => {
         if (!response) return;
-        const endTime = Date.now(); 
+        const endTime = Date.now();
         setPing(endTime - startTime);
         setTotalBatchedPixelCount(response.data.totalBatchedPixelCount);
       });
-    }, 1000);
+    }, 30000);
 
     return () => {
       clearInterval(interval);
