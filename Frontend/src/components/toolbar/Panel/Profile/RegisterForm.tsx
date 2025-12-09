@@ -1,8 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { FetchMethod, useFetch } from "../../../../hooks/useFetch";
+import { useNotification } from "../../../../contexts/Notification.context";
+import { Type } from "../../../../contexts/enums/Type.enum";
 
 const TOTAL_PHASE = 2;
+
+const REGISTER_STATUS: Record<string, string> = {
+  'E100': "이메일을 입력해주세요.",
+  'E101': "올바른 이메일 형식이 아닙니다.",
+  'E102': "이메일이 너무 깁니다.",
+  'E110': "비밀번호를 입력해주세요.",
+  'E111': "비밀번호가 너무 짧습니다.",
+  'E112': "비밀번호가 너무 깁니다.",
+  'A100': "다른 이메일을 사용해주세요.",
+  'A110': "일치하는 이메일과 비밀번호를 찾지 못했습니다.",
+};
 
 export const RegisterForm = ({ setActive }: {
   setActive: (parameter: string) => void
@@ -15,7 +28,8 @@ export const RegisterForm = ({ setActive }: {
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const passwordConfirmInputRef = useRef<HTMLInputElement>(null);
 
-  // Phase 전환 시 자동 포커스
+  const { setNotification } = useNotification();
+
   useEffect(() => {
     switch (phase) {
       case 1:
@@ -35,16 +49,25 @@ export const RegisterForm = ({ setActive }: {
       password: enteredPassword,
     });
 
-    console.log(result)
+    const status = result.internalStatusCode?.toString();
 
     if (!result.internalStatusCode?.toString().match("0000")) {
-      console.log("Failed To Register");
+      const message = REGISTER_STATUS[status ?? ''] || '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      setNotification({ title: '회원가입', content: message, type: Type.WARNING });
       setIsLoading(false);
       return;
     }
 
+    setNotification({ title: '회원가입', content: '회원가입이 완료되었습니다.' });
+
+    setEnteredEmail('');
+    setEnteredPassword('');
+    setEnteredPasswordConfirm('');
+
+    setActive('Login')
+
     setTimeout(() => {
-      setIsLoading(false)
+      setIsLoading(false);
     }, 1000)
   }
 
@@ -56,7 +79,10 @@ export const RegisterForm = ({ setActive }: {
     }
 
     if (phase === 2) {
-      if (enteredPassword !== enteredPasswordConfirm) return;
+      if (enteredPassword !== enteredPasswordConfirm) {
+        setNotification({ title: '회원가입', content: '입력한 비밀번호와 일치하지 않습니다.', type: Type.WARNING });
+        return
+      };
       handleSubmit();
       return;
     }
@@ -67,7 +93,6 @@ export const RegisterForm = ({ setActive }: {
 
   const handleBack = () => {
     setPhase(prev => prev - 1)
-    setEnteredPassword("")
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

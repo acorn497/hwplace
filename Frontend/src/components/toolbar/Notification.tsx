@@ -1,25 +1,25 @@
 import { useEffect, useState, useRef } from "react";
 import { useNotification } from "../../contexts/Notification.context"
+import { Notification } from "../../contexts/interfaces/Notification.interface";
+import { Type } from "../../contexts/enums/Type.enum";
 
-export const Notification = () => {
-  const { title, content } = useNotification();
+export const Feedback = () => {
+  const { notification } = useNotification();
 
   // 실제로 화면에 표시되는 내용
-  const [displayTitle, setDisplayTitle] = useState("");
-  const [displayContent, setDisplayContent] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const isShowingRef = useRef(false);
-  const queuedNotificationRef = useRef<{title: string, content: string} | null>(null);
+  const prevNotificationRef = useRef<Notification | null>(null);
+  const [displayNotification, setDisplayNotification] = useState<Notification | null>(null);
+  const queuedNotificationRef = useRef<Notification | null>(null);
   const hideTimerRef = useRef<number | null>(null);
-  const prevNotificationRef = useRef({ title: "", content: "" });
 
-  const showNotification = (newTitle: string, newContent: string) => {
+  const showNotification = (newNotification: Notification) => {
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
     }
 
-    setDisplayTitle(newTitle);
-    setDisplayContent(newContent);
+    setDisplayNotification(newNotification);
 
     setIsVisible(true);
     isShowingRef.current = true;
@@ -32,24 +32,19 @@ export const Notification = () => {
         if (queuedNotificationRef.current) {
           const queued = queuedNotificationRef.current;
           queuedNotificationRef.current = null;
-          showNotification(queued.title, queued.content);
+          showNotification(queued);
         }
       }, 300);
     }, 5000);
   };
 
   useEffect(() => {
-    if (!title && !content) return;
+    if (!notification) return;
 
-    if (prevNotificationRef.current.title === title &&
-        prevNotificationRef.current.content === content) {
-      return;
-    }
-
-    prevNotificationRef.current = { title, content };
+    prevNotificationRef.current = notification;
 
     if (isShowingRef.current) {
-      queuedNotificationRef.current = { title, content };
+      queuedNotificationRef.current = notification;
 
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current);
@@ -61,13 +56,13 @@ export const Notification = () => {
         if (queuedNotificationRef.current) {
           const queued = queuedNotificationRef.current;
           queuedNotificationRef.current = null;
-          showNotification(queued.title, queued.content);
+          showNotification(queued);
         }
       }, 300);
     } else {
-      showNotification(title, content);
+      showNotification(notification);
     }
-  }, [title, content]);
+  }, [notification]);
 
   useEffect(() => {
     return () => {
@@ -79,16 +74,12 @@ export const Notification = () => {
 
   return (
     <div
-      className={`w-full max-w-full h-12 mb-2 bg-primary-modal backdrop-blur-sm rounded-md border border-primary-border shadow-xs flex flex-row items-center px-4 transition-opacity duration-300 ${
-        !displayTitle && !displayContent
-          ? 'opacity-0 pointer-events-none'
-          : isVisible
-            ? 'opacity-100'
-            : 'opacity-0 pointer-events-none'
-      }`}
+      className={`w-full max-w-full h-12 mb-2 backdrop-blur-sm rounded-md border border-primary-border shadow-xs flex flex-row items-center px-4 transition-opacity duration-300 
+        ${displayNotification?.type === Type.WARNING ? "bg-yellow-100/75" : displayNotification?.type === Type.ERROR ? "bg-red-100/75" : "bg-primary-modal"}
+        ${!displayNotification ? 'opacity-0 pointer-events-none' : isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
     >
-      <span className="font-semibold">{displayTitle}:</span>
-      <span className="text-sm ml-2">{displayContent}</span>
+      <span className="font-semibold">{displayNotification?.title}:</span>
+      <span className="text-sm ml-2">{displayNotification?.content}</span>
     </div>
   )
 }

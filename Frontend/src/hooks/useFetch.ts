@@ -20,22 +20,19 @@ axiosInstance.interceptors.request.use((config) => {
 })
 
 export const useFetch = async (method: FetchMethod, uri: string, data?: any): Promise<ServerResponse> => {
-  const result = (async (): Promise<ServerResponse> => {
-    try {
-      switch (method) {
-        case FetchMethod.GET:
-          return (await axiosInstance.get(uri)).data;
-        case FetchMethod.POST:
-          return (await axiosInstance.post(uri, data)).data;
-        case FetchMethod.PATCH:
-          return (await axiosInstance.patch(uri, data)).data;
-        case FetchMethod.DELETE:
-          return (await axiosInstance.delete(uri, { data })).data;
-      }
-    } catch {
-      return {}
+  try {
+    switch (method) {
+      case FetchMethod.GET:
+        return (await axiosInstance.get(uri)).data;
+      case FetchMethod.POST:
+        return (await axiosInstance.post(uri, data)).data;
+      case FetchMethod.PATCH:
+        return (await axiosInstance.patch(uri, data)).data;
+      case FetchMethod.DELETE:
+        return (await axiosInstance.delete(uri, { data })).data;
     }
-  })();
-
-  return result;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) return error.response.data;
+    else throw error;
+  }
 }

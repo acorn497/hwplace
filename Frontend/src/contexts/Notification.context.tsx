@@ -1,20 +1,13 @@
 import { createContext, ReactNode, useContext, useState } from "react";
-import { Type } from "./enums/Type.enum";
-import { NotificationContextType } from "./interfaces/Notification.interface";
-
-
+import { Notification, NotificationContextType } from "./interfaces/Notification.interface";
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [type, setType] = useState<Type>(Type.NORMAL);
+  const [notification, setNotification] = useState<Notification | null>();
 
   const value: NotificationContextType = {
-    title, setTitle,
-    content, setContent,
-    type, setType
+    notification, setNotification
   }
 
   return (

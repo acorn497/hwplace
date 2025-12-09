@@ -9,6 +9,7 @@ import { DragMode } from "../../../contexts/enums/DragMode.enum";
 import { usePixel } from "../../../contexts/Pixel.context";
 import { FetchMethod, useFetch } from "../../../hooks/useFetch";
 import { useAuth } from "../../../contexts/Auth.context";
+import { useKeyboardShortcut } from "../../../hooks/useKeyboardShortcut";
 
 export const Brush = () => {
   const { setActiveTool } = useGlobalVariable();
@@ -32,6 +33,8 @@ export const Brush = () => {
     await useFetch(FetchMethod.POST, '/paint', paintRequest);
     setSelectedPixels([]);
   };
+
+  useKeyboardShortcut('Enter', handlePaintPixels);
 
   return (
     <div className="flex flex-col gap-3 h-full">
