@@ -4,6 +4,7 @@ import { Tool } from "../../contexts/enums/Tool.enum"
 import { Panel } from "./Panel";
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { useKeyboardShortcut } from "../../hooks/useKeyboardShortcut";
+import { Notification } from "./Notification";
 
 const ToolMap = [
   { tool: Tool.NONE, icon: <SquareMousePointer /> },
@@ -22,6 +23,7 @@ export const Toolbar = () => {
   return (
     <div className="fixed left-1/2 -translate-x-1/2 bottom-6">
       <div className="relative flex flex-col items-center">
+        <Notification />
         <Panel />
         <div className="relative flex items-center gap-2 bg-white/20 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-slate-900/10 shadow-sm shadow-black/5 mt-4">
           {ToolMap.map((tool, index) => {
