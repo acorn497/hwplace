@@ -1,12 +1,12 @@
 import { Type } from "../enums/Type.enum";
 
-export interface NotificationContextType {
+export interface Notification {
   title: string,
-  setTitle: (title: string) => void,
-
   content: string,
-  setContent: (content: string) => void,
+  type?: Type,
+}
 
-  type: Type,
-  setType: (type: Type) => void,
+export interface NotificationContextType {
+  notification: Notification | null | undefined,
+  setNotification: React.Dispatch<React.SetStateAction<Notification | null | undefined>>,
 }

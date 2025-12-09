@@ -2,6 +2,17 @@ import { useState, useRef, useEffect } from "react"
 import { ChevronLeft } from "lucide-react"
 import { FetchMethod, useFetch } from "../../../../hooks/useFetch"
 import { useAuth } from "../../../../contexts/Auth.context";
+import { useNotification } from "../../../../contexts/Notification.context";
+import { Type } from "../../../../contexts/enums/Type.enum";
+
+const LOGIN_STATUS: Record<string, string> = {
+  'E100': "이메일을 입력해주세요.",
+  'E101': "올바른 이메일 형식이 아닙니다.",
+  'E102': "이메일이 너무 깁니다.",
+  'E110': "비밀번호를 입력해주세요.",
+  'E112': "비밀번호가 너무 깁니다.",
+  'A110': "일치하는 이메일과 비밀번호를 찾지 못했습니다.",
+};
 
 export const LoginForm = ({ setActive }: { setActive: (parameter: string) => void }) => {
   const [phase, setPhase] = useState(0);
@@ -11,6 +22,7 @@ export const LoginForm = ({ setActive }: { setActive: (parameter: string) => voi
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const { setEmail, setUsername, setAccessToken } = useAuth();
+  const { setNotification } = useNotification();
 
   // Phase 전환 시 자동 포커스
   useEffect(() => {
@@ -26,18 +38,22 @@ export const LoginForm = ({ setActive }: { setActive: (parameter: string) => voi
       email: enteredEmail,
       password: enteredPassword,
     });
-    console.log(result);
 
-    if (!result.internalStatusCode?.toString().match("0000")) {
-      console.log("Failed To Login");
+    const status = result.internalStatusCode?.toString();
+
+    if (!status?.match('0000')) {
+      const message = LOGIN_STATUS[status ?? ''] || '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      setNotification({ title: '로그인', content: message, type: Type.WARNING });
+
       setIsLoading(false);
       return;
     }
-
     setEmail(result.data.email);
     setUsername(result.data.username);
     setAccessToken(result.data.accessToken);
-    
+
+    setNotification({ title: '로그인', content: '로그인이 완료되었습니다.' });
+
     setIsLoading(false);
   }
 

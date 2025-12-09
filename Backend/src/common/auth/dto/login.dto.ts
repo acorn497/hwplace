@@ -1,12 +1,13 @@
-import { IsEmail, IsNotEmpty, Length, MaxLength } from "class-validator";
+import { IsEmail, IsNotEmpty, MaxLength, MinLength, } from "class-validator";
+import { ISC } from "src/common/global/ISC";
 
 export class LoginDTO {
-  @IsEmail()
-  @IsNotEmpty()
-  @MaxLength(255)
+  @IsEmail({}, { message: ISC.VALIDATION.EMAIL_INVALID })
+  @IsNotEmpty({ message: ISC.VALIDATION.EMAIL_EMPTY })
+  @MaxLength(255, { message: ISC.VALIDATION.EMAIL_TOO_LONG })
   email: string;
 
-  @IsNotEmpty()
-  @Length(8, 255)
+  @IsNotEmpty({ message: ISC.VALIDATION.PASS_EMPTY })
+  @MaxLength(255, { message: ISC.VALIDATION.PASS_TOO_LONG })
   password: string;
 }

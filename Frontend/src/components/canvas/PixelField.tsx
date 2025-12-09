@@ -49,11 +49,11 @@ export const PixelField = () => {
    */
   useEffect(() => {
     addEventListener('mousedown', () => setIsLeftDown(true));
-    addEventListener('mouseup', () => { setIsLeftDown(false); setDragMode(DragMode.NONE); });
+    addEventListener('mouseup', () => { setIsLeftDown(false); });
 
     return () => {
       removeEventListener('mousedown', () => setIsLeftDown(true));
-      removeEventListener('mouseup', () => { setIsLeftDown(false); setDragMode(DragMode.NONE); });
+      removeEventListener('mouseup', () => { setIsLeftDown(false); });
     }
   }, []);
 

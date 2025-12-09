@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { GlobalResponse } from '../global/global-response.dto';
 import bcrypt from 'bcrypt';
 import DB from 'src/util/db.util';
@@ -6,21 +6,17 @@ import { RegisterDTO } from './dto/register.dto';
 import { LoginDTO } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import log from 'spectra-log';
+import { ISC } from '../global/ISC';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService
   ) { };
-  /**
-   * ISC
-   * 
-   * 200: OK
-   * 
-   * 1000: Input 1 is problem
-   * 1001: Input 2 is problem
-   */
   async register(request: RegisterDTO) {
+    /**
+     * Response 중복 코드 삭제 고려
+     */
     let response: GlobalResponse = {};
     response.title = "회원가입"
 
@@ -32,8 +28,8 @@ export class AuthService {
 
     if (conflict) {
       response.message = "다른 이메일을 사용해주세요.";
-      response.internalStatusCode = "1110";
-      return response;
+      response.internalStatusCode = ISC.AUTH.EMAIL_CONFLICT;
+      throw new ConflictException(response);
     }
 
     const encryptedPass = await bcrypt.hash(request.password, 15);
@@ -47,7 +43,7 @@ export class AuthService {
     });
 
     response.title = "회원가입이 완료되었습니다.";
-    response.internalStatusCode = "0000";
+    response.internalStatusCode = ISC.SUCCESS;
 
     return response;
   }
@@ -71,8 +67,8 @@ export class AuthService {
     log(exist)
     if (!exist || !await bcrypt.compare(request.password, exist.USER_PASSWORD)) {
       response.message = "이메일 또는 비밀번호가 일치하지 않습니다.";
-      response.internalStatusCode = '1110' // Temporary
-      return response;
+      response.internalStatusCode = ISC.AUTH.INVALID_CREDENTIALS
+      throw new UnauthorizedException(response);
     }
 
     const payload = { 
@@ -89,7 +85,7 @@ export class AuthService {
       username: exist.USER_DISPLAY,
       accessToken: token,
     };
-    response.internalStatusCode = '0000';
+    response.internalStatusCode = ISC.SUCCESS;
 
     return response;
   }
