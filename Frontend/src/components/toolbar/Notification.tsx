@@ -2,9 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { useNotification } from "../../contexts/Notification.context"
 import { Notification } from "../../contexts/interfaces/Notification.interface";
 import { Type } from "../../contexts/enums/Type.enum";
+import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 
 export const Feedback = () => {
   const { notification } = useNotification();
+  const { panelPosition } = useGlobalVariable();
 
   // 실제로 화면에 표시되는 내용
   const [isVisible, setIsVisible] = useState(false);
@@ -72,9 +74,17 @@ export const Feedback = () => {
     };
   }, []);
 
+  const getPosition = () => {
+    if (panelPosition === 'top-left' || panelPosition === 'top-right') {
+      return 'top-1/1 mt-2';
+    } else {
+      return '-top-2/10 mb-2';
+    }
+  }
+
   return (
     <div
-      className={`w-full max-w-full h-12 mb-2 backdrop-blur-sm rounded-md border border-primary-border shadow-xs flex flex-row items-center px-4 transition-opacity duration-300 
+      className={`absolute ${getPosition()} w-full max-w-full h-12 mb-2 backdrop-blur-sm rounded-md border border-primary-border shadow-xs flex flex-row items-center px-4 transition-opacity duration-300 
         ${displayNotification?.type === Type.WARNING ? "bg-yellow-100/75" : displayNotification?.type === Type.ERROR ? "bg-red-100/75" : "bg-primary-modal"}
         ${!displayNotification ? 'opacity-0 pointer-events-none' : isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
     >

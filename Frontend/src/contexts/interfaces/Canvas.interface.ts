@@ -26,4 +26,7 @@ export interface CanvasContextType {
 
   isLeftDown: boolean;
   setIsLeftDown: (isDown: boolean) => void;
+  
+  isCloneColorActive: boolean;
+  setIsCloneColorActive: (isDown: boolean) => void;
 }

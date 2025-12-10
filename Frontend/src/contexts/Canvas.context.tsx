@@ -9,13 +9,14 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
   const [canvasStatus, setCanvasStatus] = useState<CanvasStatus>(CanvasStatus.WAITING);
 
   const [canvasSizeX, setCanvasSizeX] = useState(0);
-  const [canvasSizeY, setCanvasSizeY] = useState(0);  
+  const [canvasSizeY, setCanvasSizeY] = useState(0);
   const [loadedPixel, setLoadedPixel] = useState(0);
 
   const [zoom, setZoom] = useState(1);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [dragMode, setDragMode] = useState<DragMode>(DragMode.NONE);
   const [isLeftDown, setIsLeftDown] = useState(false);
+  const [isCloneColorActive, setIsCloneColorActive] = useState(false);
 
   const value: CanvasContextType = {
     canvasStatus, setCanvasStatus,
@@ -27,7 +28,7 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
     cursorPosition, setCursorPosition,
     dragMode, setDragMode,
     isLeftDown, setIsLeftDown,
-
+    isCloneColorActive, setIsCloneColorActive,
   };
 
   return (

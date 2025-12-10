@@ -60,8 +60,8 @@ export const PixelField = () => {
   useKeyboardShortcut("K", () => { setZoom(Math.round(zoom - 1 > 0 ? zoom - 1 : zoom)); isInitialRenderRef.current = true; });
   useKeyboardShortcut("I", () => { setZoom(Math.round(zoom + 1)); isInitialRenderRef.current = true; });
 
-  useKeyboardShortcut("Shift", () => setDragMode(dragMode === DragMode.SELECT ? DragMode.NONE : DragMode.SELECT));
-  useKeyboardShortcut("Ctrl", () => setDragMode(dragMode === DragMode.CANCEL ? DragMode.NONE : DragMode.CANCEL));
+  useKeyboardShortcut("Shift", () => setDragMode(activeTool === Tool.BRUSH ? dragMode === DragMode.SELECT ? DragMode.NONE : DragMode.SELECT : dragMode));
+  useKeyboardShortcut("Ctrl", () => setDragMode(activeTool === Tool.BRUSH ? dragMode === DragMode.CANCEL ? DragMode.NONE : DragMode.CANCEL : dragMode));
 
   const previousPixelsRef = useRef<Map<string, { colorR: number, colorG: number, colorB: number }>>(new Map());
   const isInitialRenderRef = useRef(true);

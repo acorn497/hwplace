@@ -1,3 +1,4 @@
+import { PanelPosition } from "../enums/PanelPosition.enum";
 import { Tool } from "../enums/Tool.enum";
 import { View } from "../enums/View.enum";
 
@@ -17,4 +18,7 @@ export interface GlobalVariableContextType {
 
   version: string;
   setVersion: (version: string) => void;
+
+  panelPosition: PanelPosition;
+  setPanelPosition: (position: PanelPosition) => void;
 }

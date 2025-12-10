@@ -1,6 +1,6 @@
 import { useGlobalVariable } from "../../../contexts/GlobalVariable.context";
 import { Tool } from "../../../contexts/enums/Tool.enum";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RgbColorPicker } from "./Brush/ColorPicker";
 import { Titlebox } from "../../common/Titlebox";
 import { Button } from "../../common/Button";
@@ -10,14 +10,34 @@ import { usePixel } from "../../../contexts/Pixel.context";
 import { FetchMethod, useFetch } from "../../../hooks/useFetch";
 import { useAuth } from "../../../contexts/Auth.context";
 import { useKeyboardShortcut } from "../../../hooks/useKeyboardShortcut";
+import { Pipette } from "lucide-react";
 
 export const Brush = () => {
   const { setActiveTool } = useGlobalVariable();
-  const { cursorPosition, dragMode, isLeftDown } = useCanvas();
-  const { selectedPixels, setSelectedPixels } = usePixel();
+  const { cursorPosition, dragMode, isLeftDown, isCloneColorActive, setIsCloneColorActive } = useCanvas();
+  const { selectedPixels, setSelectedPixels, pixels } = usePixel();
   const { accessToken } = useAuth();
 
-  const [currentColor, setCurrentColor] = useState({ r: 58, g: 118, b: 118 });
+  const [currentColor, setCurrentColor] = useState(() => {
+    const lastUsedRed = parseInt(localStorage.getItem('R') ?? '');
+    const lastUsedGreen = parseInt(localStorage.getItem('G') ?? '');
+    const lastUsedBlue = parseInt(localStorage.getItem('B') ?? '');
+    return {
+      r: isNaN(lastUsedRed) ? 58 : lastUsedRed,
+      g: isNaN(lastUsedGreen) ? 118 : lastUsedGreen,
+      b: isNaN(lastUsedBlue) ? 118 : lastUsedBlue
+    }
+  });
+
+  const clampColor = (value: number) => Math.max(0, Math.min(255, value));
+
+  useEffect(() => {
+    if (!isNaN(currentColor.r) && !isNaN(currentColor.g) && !isNaN(currentColor.b)) {
+      localStorage.setItem('R', currentColor.r.toString());
+      localStorage.setItem('G', currentColor.g.toString());
+      localStorage.setItem('B', currentColor.b.toString());
+    }
+  }, [currentColor]);
 
   const handlePaintPixels = async () => {
     if (selectedPixels.length === 0) return;
@@ -34,7 +54,20 @@ export const Brush = () => {
     setSelectedPixels([]);
   };
 
+  const handleCloneColor = () => {
+    const selectedPixel = pixels.get(`${cursorPosition.x},${cursorPosition.y}`) ?? { colorR: 255, colorG: 255, colorB: 255 };
+    setCurrentColor({ r: selectedPixel?.colorR, g: selectedPixel?.colorG, b: selectedPixel?.colorB })
+  }
+
+  useEffect(() => {
+    if (!isLeftDown || !isCloneColorActive) return;
+
+    handleCloneColor();
+    setIsCloneColorActive(false);
+  }, [isLeftDown, isCloneColorActive]);
+
   useKeyboardShortcut('Enter', handlePaintPixels);
+  useKeyboardShortcut('C', () => setIsCloneColorActive(!isCloneColorActive));
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -57,13 +90,13 @@ export const Brush = () => {
 
           <section className="grid grid-cols-3 gap-x-1">
             <Titlebox title="R">
-              <input type="number" className="appearance-none aritta-font tracking-wide focus:outline-none transition-colors" minLength={1} maxLength={3} min={0} max={255} defaultValue={0} value={currentColor.r} onChange={(event) => setCurrentColor(prev => { return { r: parseInt(event.target.value) ?? 0, g: prev.g, b: prev.b } })} />
+              <input type="number" className="appearance-none aritta-font tracking-wide focus:outline-none transition-colors" minLength={1} maxLength={3} min={0} max={255} defaultValue={0} value={currentColor.r} onChange={(event) => setCurrentColor(prev => { return { r: clampColor(parseInt(event.target.value) || 0), g: prev.g, b: prev.b } })} />
             </Titlebox>
             <Titlebox title="G">
-              <input type="number" className="appearance-none aritta-font tracking-wide focus:outline-none transition-colors" minLength={1} maxLength={3} min={0} max={255} defaultValue={0} value={currentColor.g} onChange={(event) => setCurrentColor(prev => { return { r: prev.r, g: parseInt(event.target.value) ?? 0, b: prev.b } })} />
+              <input type="number" className="appearance-none aritta-font tracking-wide focus:outline-none transition-colors" minLength={1} maxLength={3} min={0} max={255} defaultValue={0} value={currentColor.g} onChange={(event) => setCurrentColor(prev => { return { r: prev.r, g: clampColor(parseInt(event.target.value) || 0), b: prev.b } })} />
             </Titlebox>
             <Titlebox title="B">
-              <input type="number" className="appearance-none aritta-font tracking-wide focus:outline-none transition-colors" minLength={1} maxLength={3} min={0} max={255} defaultValue={0} value={currentColor.b} onChange={(event) => setCurrentColor(prev => { return { r: prev.r, g: prev.g, b: parseInt(event.target.value) ?? 0 } })} />
+              <input type="number" className="appearance-none aritta-font tracking-wide focus:outline-none transition-colors" minLength={1} maxLength={3} min={0} max={255} defaultValue={0} value={currentColor.b} onChange={(event) => setCurrentColor(prev => { return { r: prev.r, g: prev.g, b: clampColor(parseInt(event.target.value) || 0) } })} />
             </Titlebox>
           </section>
 
@@ -72,8 +105,9 @@ export const Brush = () => {
         <section className="flex flex-col gap-2 w-full h-full">
           <div className="flex gap-2">
             <div className="w-15 h-15 rounded-md border border-primary-border shadow-sm" style={{ backgroundColor: `rgb(${currentColor.r},${currentColor.g},${currentColor.b})` }} />
-            <div className="flex-1 h-15">
+            <div className="flex-1 flex-row flex h-15">
               <Button display="칠하기" hint="선택된 구역을 칠합니다." keybind="Enter" callback={handlePaintPixels} />
+              <Button className={`${isCloneColorActive ? 'bg-amber-50' : null}`} hint="선택된 픽셀의 색상을 복사합니다." keybind="C" callback={() => setIsCloneColorActive(!isCloneColorActive)}><Pipette className="w-5 h-5" /></Button>
             </div>
           </div>
 
@@ -94,7 +128,7 @@ export const Brush = () => {
               ({cursorPosition.x}, {cursorPosition.y})
             </Titlebox>
             <Titlebox title="SELECTED" className="bg-slate-50">
-              { selectedPixels.length }
+              {selectedPixels.length}
             </Titlebox>
           </div>
         </section>

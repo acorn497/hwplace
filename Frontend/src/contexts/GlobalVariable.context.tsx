@@ -3,6 +3,7 @@ import type { GlobalVariableContextType } from "./interfaces/GlobalVariable.inte
 import { Tool } from "./enums/Tool.enum";
 import { View } from "./enums/View.enum";
 import { FetchMethod, useFetch } from "../hooks/useFetch";
+import { PanelPosition } from "./enums/PanelPosition.enum";
 
 const GlobalVariableContext = createContext<GlobalVariableContextType | undefined>(undefined);
 
@@ -13,6 +14,15 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
   const [ping, setPing] = useState(0);
   const [totalBatchedPixelCount, setTotalBatchedPixelCount] = useState(0);
   const [version, setVersion] = useState('');
+  const [panelPosition, setPanelPosition] = useState<PanelPosition>(() => {
+    const saved = localStorage.getItem('panelPosition');
+    return (saved as PanelPosition) ?? PanelPosition.BC;
+  });
+
+
+  useEffect(() => {
+    localStorage.setItem('panelPosition', panelPosition);
+  }, [panelPosition])
 
   useEffect(() => {
     const startTime = Date.now();
@@ -46,6 +56,7 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
     ping, setPing,
     totalBatchedPixelCount, setTotalBatchedPixelCount,
     version, setVersion,
+    panelPosition, setPanelPosition,
   };
 
   return (

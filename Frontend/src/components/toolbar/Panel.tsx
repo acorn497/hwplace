@@ -5,6 +5,8 @@ import { Chat } from "./Panel/Chat";
 import { Brush } from "./Panel/Brush";
 import { Profile } from "./Panel/Profile";
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
+import { Setting } from "./Panel/Setting";
+import { Feedback } from "./Notification";
 
 enum PanelAction {
   MOVE_RIGHT = -1,
@@ -24,6 +26,7 @@ export const Panel = () => {
     '',
     <Brush />,
     <Chat />,
+    <Setting />,
     <Profile />,
     <Service />
   ]
@@ -70,15 +73,18 @@ export const Panel = () => {
   };
 
   return (
-    <div className={`bg-white/90 backdrop-blur-sm transition-normal duration-200 ease-in-out w-150 ${activeTool === 0 ? "h-0 border-0 border-slate-900/0 shadow-none" : "h-75 border border-slate-900/10 shadow-sm"} rounded-lg relative flex flex-row overflow-hidden`}>
-      <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
-        {PanelMap[activedTool]}
-      </div>
-      <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
-        {PanelMap[currentTool]}
-      </div>
-      <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
-        {PanelMap[activedTool]}
+    <div>
+      <Feedback />
+      <div className={`bg-white/90 backdrop-blur-sm transition-normal duration-200 ease-in-out w-150 ${activeTool === 0 ? "h-0 border-0 border-slate-900/0 shadow-none" : "h-75 border border-slate-900/10 shadow-sm"} rounded-lg relative flex flex-row overflow-hidden`}>
+        <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
+          {PanelMap[activedTool]}
+        </div>
+        <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
+          {PanelMap[currentTool]}
+        </div>
+        <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
+          {PanelMap[activedTool]}
+        </div>
       </div>
     </div>
   );
