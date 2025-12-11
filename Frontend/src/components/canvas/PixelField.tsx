@@ -142,25 +142,25 @@ export const PixelField = () => {
     }
 
     canvasRef.current.addEventListener('mousemove', handleMouseMove);
-    canvasRef.current.addEventListener('click', handleMouseClick);
+    canvasRef.current.addEventListener('mousedown', handleMouseClick);
 
     return () => {
       if (canvasRef.current) {
         canvasRef.current.removeEventListener('mousemove', handleMouseMove);
-        canvasRef.current.removeEventListener('click', handleMouseClick);
+        canvasRef.current.removeEventListener('mousedown', handleMouseClick);
       }
     }
   }, [canvasRef.current, zoom, cursorPosition, selectedPixels]);
 
   return (
-    <div className="w-screen h-screen overflow-scroll">
-      <div ref={canvasBaseRef} className="absolute top-1/2 left-1/2 -translate-1/2" style={{ width: 1000 * zoom, height: 1000 * zoom }}>
-        <canvas ref={canvasRef} className="border -translate-1/2 absolute top-1/2 left-1/2" width={1000 * zoom} height={1000 * zoom}>
+    <div className="w-screen h-screen overflow-auto">
+      <div className="min-w-[250%] min-h-[300%] flex items-center justify-center p-8">
+        <div ref={canvasBaseRef} className="relative" style={{ width: 1000 * zoom, height: 1000 * zoom }}>
+          <canvas ref={canvasRef} className="border absolute top-0 left-0" width={1000 * zoom} height={1000 * zoom}>
 
-        </canvas>
-        <div>
-          <div className="absolute z-10 transition-normal duration-80 ease-out pointer-events-none" style={{ transform: `translate(${zoom * cursorPosition.x}px,${zoom * (cursorPosition.y)}px)`, width: zoom, height: zoom, border: `${1 / zoom}px solid black` }} />
-          {selectedPixels.map((selection, index) => <div key={index} className="absolute pointer-events-none z-1" style={{ transform: `translate(${(zoom * selection.x)}px,${(zoom * selection.y)}px)`, border: '1px solid green', width: `${zoom}px`, height: `${zoom}px` }} />)}
+          </canvas>
+          <div className="absolute z-10 transition-normal duration-80 ease-out pointer-events-none top-0 left-0" style={{ transform: `translate(${zoom * cursorPosition.x}px,${zoom * (cursorPosition.y)}px)`, width: zoom, height: zoom, border: `${1 / zoom}px solid black` }} />
+          {selectedPixels.map((selection, index) => <div key={index} className="absolute pointer-events-none top-0 left-0" style={{ transform: `translate(${(zoom * selection.x)}px,${(zoom * selection.y)}px)`, border: '1px solid green', width: `${zoom}px`, height: `${zoom}px` }} />)}
         </div>
       </div>
     </div>

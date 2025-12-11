@@ -29,4 +29,7 @@ export interface CanvasContextType {
   
   isCloneColorActive: boolean;
   setIsCloneColorActive: (isDown: boolean) => void;
+  
+  isPaintBucketActive: boolean;
+  setIsPaintBucketActive: (isDown: boolean) => void;
 }
