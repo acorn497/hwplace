@@ -17,6 +17,7 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
   const [dragMode, setDragMode] = useState<DragMode>(DragMode.NONE);
   const [isLeftDown, setIsLeftDown] = useState(false);
   const [isCloneColorActive, setIsCloneColorActive] = useState(false);
+  const [isPaintBucketActive, setIsPaintBucketActive] = useState(false);
 
   const value: CanvasContextType = {
     canvasStatus, setCanvasStatus,
@@ -29,6 +30,7 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
     dragMode, setDragMode,
     isLeftDown, setIsLeftDown,
     isCloneColorActive, setIsCloneColorActive,
+    isPaintBucketActive, setIsPaintBucketActive
   };
 
   return (
