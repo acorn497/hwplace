@@ -18,7 +18,7 @@ export class PaintController {
   @UseGuards(AuthGuard)
   @Post()
   async paintPixel(@Body(new ParseArrayPipe({ items: PaintPixelDTO })) body: PaintPixelDTO[], @Request() request) {
-    const BATCH_SIZE = this.configService.get<number>("WORKER_BATCH_SIZE") ?? 100;
+    const BATCH_SIZE = this.configService.get<number>("WORKER_BATCH_SIZE") ?? 750;
     const userIdx = request.user.index
 
     const pixelsWithUser: JobWithUserType[] = body.map(pixel => ({ ...pixel, userIndex: userIdx }));
