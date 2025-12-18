@@ -1,7 +1,9 @@
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context"
+import { usePixel } from "../../contexts/Pixel.context";
 import { Panel } from "../toolbar/Panel"
 import { Toolbar } from "../toolbar/Toolbar"
 import { PixelField } from "./PixelField"
+import { PixelInfo } from "./PixelInfo"
 
 const POSITION_CLASSES = {
   'top-left': 'translate-x-0 translate-y-0',
@@ -13,11 +15,13 @@ const POSITION_CLASSES = {
 
 export const Canvas = () => {
   const { panelPosition } = useGlobalVariable();
+  const { selectedPixel } = usePixel();
   const positionClass = POSITION_CLASSES[panelPosition] || POSITION_CLASSES['bottom-center'];
 
   return (
     <>
       <PixelField />
+      <PixelInfo selectedPixel={selectedPixel} />
       <div className={`fixed left-6 top-6 ${positionClass} transition-all duration-300 ease-in-out`}>
         <Panel />
       </div>

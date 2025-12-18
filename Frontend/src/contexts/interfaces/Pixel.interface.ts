@@ -24,4 +24,19 @@ export interface PixelContextType {
 
   selectedPixels: PixelPositionContextType[],
   setSelectedPixels: Dispatch<SetStateAction<PixelPositionContextType[]>>;
+
+  selectedPixel: DetailedPixel | null,
+  setSelectedPixel: Dispatch<SetStateAction<DetailedPixel | null>>;
+}
+
+export interface DetailedPixel {
+  posX: number;
+  posY: number;
+  colorR: number;
+  colorG: number;
+  colorB: number;
+  uuid: string;
+  index: number;
+  paintedBy: string;
+  paintedAt: string;
 }

@@ -8,14 +8,11 @@ import log from "spectra-log";
 import { ConfigService } from "@nestjs/config";
 import { JobType, JobWithUserType } from "../job.interface";
 
-@Processor('paint-pixel', {
-  concurrency: 6,
-})
+@Processor('paint-pixel')
 export class PaintPixelProcess extends WorkerHost {
   private buffer: JobType[] = [];
   private flushScheduled = false;
   private processing = 0;
-  private WORKER_BATCH_TIMEOUT: number;
   private WORKER_MAX_CONCURRENT: number;
   private WORKER_MAX_BATCH_SIZE: number;
   private WORKER_MAX_RETRY: number;
@@ -25,31 +22,22 @@ export class PaintPixelProcess extends WorkerHost {
     private readonly configService: ConfigService,
   ) {
     super();
-    this.WORKER_MAX_BATCH_SIZE = this.configService.get<number>("WORKER_MAX_BATCH_SIZE") ?? 500;
-    this.WORKER_BATCH_TIMEOUT = this.configService.get<number>("WORKER_BATCH_TIMEOUT") ?? 10;
     this.WORKER_MAX_CONCURRENT = this.configService.get<number>("WORKER_MAX_CONCURRENT") ?? 6;
     this.WORKER_MAX_RETRY = this.configService.get<number>("WORKER_MAX_RETRY") ?? 3;
-
-    setInterval(() => {
-      if (this.buffer.length > 0 && !this.flushScheduled) {
-        this.flushScheduled = true;
-        setImmediate(() => this.tryFlush('timer'));
-      }
-    }, this.WORKER_BATCH_TIMEOUT);
   }
 
   async process(job: Job): Promise<any> {
     this.buffer.push(job);
 
-    if (!this.flushScheduled && this.buffer.length >= this.WORKER_MAX_BATCH_SIZE) {
+    if (!this.flushScheduled) {
       this.flushScheduled = true;
-      setImmediate(() => this.tryFlush(job.id!));
+      setImmediate(() => this.flush(job.id!));
     }
 
     return { buffered: job.data.pixels.length };
   }
 
-  private async tryFlush(source: string | number): Promise<void> {
+  private async flush(source: string | number): Promise<void> {
     if (this.processing >= this.WORKER_MAX_CONCURRENT || this.buffer.length === 0) {
       this.flushScheduled = false;
       return;
@@ -74,7 +62,10 @@ export class PaintPixelProcess extends WorkerHost {
           ON DUPLICATE KEY UPDATE
             PIXEL_COLOR_R = VALUES(PIXEL_COLOR_R),
             PIXEL_COLOR_G = VALUES(PIXEL_COLOR_G),
-            PIXEL_COLOR_B = VALUES(PIXEL_COLOR_B)
+            PIXEL_COLOR_B = VALUES(PIXEL_COLOR_B),
+            PIXEL_UUID = VALUES(PIXEL_UUID),
+            PIXEL_PAINTED_BY = VALUES(PIXEL_PAINTED_BY),
+            PIXEL_PAINTED_AT = NOW()
         `);
 
         this.broadcast(batch.data.pixels);
@@ -103,7 +94,7 @@ export class PaintPixelProcess extends WorkerHost {
     if (this.buffer.length >= this.WORKER_MAX_BATCH_SIZE) {
       this.flushScheduled = true;
       const nextSource = typeof source === 'string' && source === 'timer' ? 'timer' : source;
-      setImmediate(() => this.tryFlush(nextSource));
+      setImmediate(() => this.flush(nextSource));
     }
   }
 
@@ -121,7 +112,7 @@ export class PaintPixelProcess extends WorkerHost {
 
   async onModuleDestroy() {
     while (this.buffer.length > 0) {
-      await this.tryFlush('shutdown');
+      await this.flush('shutdown');
       await new Promise(r => setTimeout(r, 10));
     }
 
