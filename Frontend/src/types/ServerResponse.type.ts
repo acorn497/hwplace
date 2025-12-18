@@ -1,6 +1,6 @@
 export interface ServerResponse {
   title?: string,
   message?: string,
-  internalStatusCode?: number | number[] | string[],
+  internalStatusCode?: string | number | number[] | string[],
   data?: any,
 }

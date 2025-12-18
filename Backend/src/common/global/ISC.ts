@@ -3,7 +3,7 @@
  * 0: ETC ...
  * A: AUTH
  * B: 
- * C: 
+ * C: PIXEL
  * D: 
  * E: VALIDATION
  * F: SERVER
@@ -34,4 +34,9 @@ export const ISC = {
 
     UNKNOWN_ERROR: 'F900', // = Internal Server Error
   },
+
+  PIXEL: {
+    FOUND_DATA: 'C100',
+    NO_DATA: 'C101',
+  }
 } 

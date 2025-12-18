@@ -6,11 +6,12 @@ import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { useKeyboardShortcut } from "../../hooks/useKeyboardShortcut";
 import { Tool } from "../../contexts/enums/Tool.enum";
 import { DragMode } from "../../contexts/enums/DragMode.enum";
+import { FetchMethod, useFetch } from "../../hooks/useFetch";
 
 export const PixelField = () => {
   const canvasBaseRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const { pixels, pixelLoadStatus, selectedPixels, setSelectedPixels } = usePixel();
+  const { pixels, pixelLoadStatus, selectedPixels, setSelectedPixels, setSelectedPixel } = usePixel();
   const { setLoadedPixel, zoom, setZoom, dragMode, setDragMode, isLeftDown, setIsLeftDown, cursorPosition, setCursorPosition } = useCanvas();
   const { activeTool } = useGlobalVariable();
 
@@ -18,8 +19,40 @@ export const PixelField = () => {
    * 픽셀 선택/해제
    * 
    */
-  const handleMouseClick = () => {
-    if (activeTool !== Tool.BRUSH) return;
+  const handleMouseClick = async () => {
+    if (activeTool !== Tool.BRUSH) {
+      const result = await useFetch(FetchMethod.GET, `/pixel?x=${cursorPosition.x}&y=${cursorPosition.y}`);
+
+      // ISC 분기 처리
+      switch (result.internalStatusCode) {
+        case 'C100': // FOUND_DATA
+          setSelectedPixel({
+            posX: result.data.posX,
+            posY: result.data.posY,
+            colorR: result.data.colorR,
+            colorG: result.data.colorG,
+            colorB: result.data.colorB,
+            uuid: result.data.uuid,
+            index: result.data.index,
+            paintedAt: result.data.paintedAt,
+            paintedBy: result.data.paintedBy,
+          });
+          break;
+
+        case 'C101': // NO_DATA
+          // 픽셀 데이터가 없는 경우 - 선택 해제
+          setSelectedPixel(null);
+          console.log(`No pixel data found at (${cursorPosition.x}, ${cursorPosition.y})`);
+          break;
+
+        default:
+          // 기타 에러 처리
+          setSelectedPixel(null);
+          console.error('Unexpected response:', result);
+          break;
+      }
+      return;
+    }
 
     const selectedPosition = { x: cursorPosition.x, y: cursorPosition.y };
     if (isSelected(selectedPosition)) cancelPixel(selectedPosition);

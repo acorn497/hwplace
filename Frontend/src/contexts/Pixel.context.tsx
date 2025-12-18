@@ -6,7 +6,7 @@ import { CanvasStatus } from "./enums/CanvasStatus.enum";
 import { useCanvas } from "./Canvas.context";
 import { useGlobalVariable } from "./GlobalVariable.context";
 import { PixelPositionContextType } from "./interfaces/PixelPosition.interface";
-import { Pixel, PixelContextType } from "./interfaces/Pixel.interface";
+import { DetailedPixel, Pixel, PixelContextType } from "./interfaces/Pixel.interface";
 
 
 const PixelContext = createContext<PixelContextType | undefined>(undefined);
@@ -26,6 +26,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
 
   const [pixels, setPixels] = useState<Map<string, Pixel>>(new Map());
   const [selectedPixels, setSelectedPixels] = useState<PixelPositionContextType[]>([]);
+  const [selectedPixel, setSelectedPixel] = useState<DetailedPixel | null>(null);
 
   const { setVersion } = useGlobalVariable();
   const { setCanvasSizeX, setCanvasSizeY } = useCanvas();
@@ -134,7 +135,8 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
     pixels,
     getPixel,
     setPixel,
-    selectedPixels, setSelectedPixels
+    selectedPixels, setSelectedPixels,
+    selectedPixel, setSelectedPixel,
   };
 
   return (
