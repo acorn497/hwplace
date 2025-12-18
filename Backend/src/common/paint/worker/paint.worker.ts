@@ -6,15 +6,9 @@ import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { randomUUID } from "crypto";
 import log from "spectra-log";
 import { ConfigService } from "@nestjs/config";
-import { JobType, JobWithUserType } from "../job.interface";
 
 @Processor('paint-pixel')
 export class PaintPixelProcess extends WorkerHost {
-  private buffer: JobType[] = [];
-  private flushScheduled = false;
-  private processing = 0;
-  private WORKER_MAX_CONCURRENT: number;
-  private WORKER_MAX_BATCH_SIZE: number;
   private WORKER_MAX_RETRY: number;
 
   constructor(
@@ -22,38 +16,17 @@ export class PaintPixelProcess extends WorkerHost {
     private readonly configService: ConfigService,
   ) {
     super();
-    this.WORKER_MAX_CONCURRENT = this.configService.get<number>("WORKER_MAX_CONCURRENT") ?? 6;
     this.WORKER_MAX_RETRY = this.configService.get<number>("WORKER_MAX_RETRY") ?? 3;
   }
 
   async process(job: Job): Promise<any> {
-    this.buffer.push(job);
-
-    if (!this.flushScheduled) {
-      this.flushScheduled = true;
-      setImmediate(() => this.flush(job.id!));
-    }
-
-    return { buffered: job.data.pixels.length };
-  }
-
-  private async flush(source: string | number): Promise<void> {
-    if (this.processing >= this.WORKER_MAX_CONCURRENT || this.buffer.length === 0) {
-      this.flushScheduled = false;
-      return;
-    }
-
-    this.processing++;
-    const batch = this.buffer.pop();
-    if (!batch) return;
-
     let success = false;
     let retries = 0;
 
     while (retries <= this.WORKER_MAX_RETRY && !success) {
       try {
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const values = batch.data.pixels
+        const values = job.data.pixels
           .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}', ${p.userIndex}, '${now}')`)
           .join(', ');
 
@@ -67,10 +40,10 @@ export class PaintPixelProcess extends WorkerHost {
             PIXEL_UUID = VALUES(PIXEL_UUID),
             PIXEL_PAINTED_BY = VALUES(PIXEL_PAINTED_BY),
             PIXEL_PAINTED_AT = VALUES(PIXEL_PAINTED_AT)
-        `);
+            `);
 
-        this.broadcast(batch.data.pixels);
-        log(`${batch.data.pixels.length} pixels OK`, 200);
+        this.broadcast(job.data.pixels);
+        log(`${job.data.pixels.length} pixels OK`, 200);
         success = true;
       } catch (err: any) {
         const isDeadlock = err.code === 'P2010' && err.meta?.code === '1213';
@@ -83,20 +56,12 @@ export class PaintPixelProcess extends WorkerHost {
           continue;
         }
 
-        log(`FAILED after ${retries} retries. Restoring ${batch.data.pixels.length} pixels\nStack: ${err.message}`, 500, 'ERROR');
-        this.buffer.unshift(batch);
+        log(`FAILED after ${retries} retries. Restoring ${job.data.pixels.length} pixels\nStack: ${err.message}`, 500, 'ERROR');
         success = true;
       }
+      return { buffered: job.data.pixels.length };
     }
 
-    this.processing--;
-    this.flushScheduled = false;
-
-    if (this.buffer.length >= this.WORKER_MAX_BATCH_SIZE) {
-      this.flushScheduled = true;
-      const nextSource = typeof source === 'string' && source === 'timer' ? 'timer' : source;
-      setImmediate(() => this.flush(nextSource));
-    }
   }
 
   private broadcast(pixels: PaintPixelDTO[]) {
@@ -109,16 +74,5 @@ export class PaintPixelProcess extends WorkerHost {
       timestamp: new Date().toISOString(),
       batchSize: pixels.length
     });
-  }
-
-  async onModuleDestroy() {
-    while (this.buffer.length > 0) {
-      await this.flush('shutdown');
-      await new Promise(r => setTimeout(r, 10));
-    }
-
-    while (this.processing > 0) {
-      await new Promise(r => setTimeout(r, 50));
-    }
   }
 }
