@@ -52,12 +52,13 @@ export class PaintPixelProcess extends WorkerHost {
 
     while (retries <= this.WORKER_MAX_RETRY && !success) {
       try {
+        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
         const values = batch.data.pixels
-          .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}', ${p.userIndex})`)
+          .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}', ${p.userIndex}, '${now}')`)
           .join(', ');
 
         await DB.$executeRawUnsafe(`
-          INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID, PIXEL_PAINTED_BY)
+          INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID, PIXEL_PAINTED_BY, PIXEL_PAINTED_AT)
           VALUES ${values}
           ON DUPLICATE KEY UPDATE
             PIXEL_COLOR_R = VALUES(PIXEL_COLOR_R),
@@ -65,7 +66,7 @@ export class PaintPixelProcess extends WorkerHost {
             PIXEL_COLOR_B = VALUES(PIXEL_COLOR_B),
             PIXEL_UUID = VALUES(PIXEL_UUID),
             PIXEL_PAINTED_BY = VALUES(PIXEL_PAINTED_BY),
-            PIXEL_PAINTED_AT = NOW()
+            PIXEL_PAINTED_AT = VALUES(PIXEL_PAINTED_AT)
         `);
 
         this.broadcast(batch.data.pixels);
@@ -82,7 +83,7 @@ export class PaintPixelProcess extends WorkerHost {
           continue;
         }
 
-        log(`FAILED after ${retries} retries. Restoring ${batch.data.pixels.length} pixels`, 500, 'ERROR');
+        log(`FAILED after ${retries} retries. Restoring ${batch.data.pixels.length} pixels\nStack: ${err.message}`, 500, 'ERROR');
         this.buffer.unshift(batch);
         success = true;
       }

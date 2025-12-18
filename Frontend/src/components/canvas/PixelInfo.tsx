@@ -1,11 +1,11 @@
 import { DetailedPixel } from "../../contexts/interfaces/Pixel.interface";
+import { useEffect, useState } from "react";
 
 interface PixelInfoProps {
   selectedPixel: DetailedPixel | null;
 }
 
 const formatRelativeTime = (dateString: string): string => {
-  console.log(dateString)
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = Math.abs(now.getTime() - date.getTime());
@@ -27,6 +27,18 @@ const formatRelativeTime = (dateString: string): string => {
 };
 
 export const PixelInfo = ({ selectedPixel }: PixelInfoProps) => {
+  const [, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!selectedPixel) return;
+
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedPixel]);
+
   if (!selectedPixel) return null;
 
   return (
