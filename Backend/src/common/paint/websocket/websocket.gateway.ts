@@ -1,3 +1,5 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   WebSocketGateway,
@@ -22,7 +24,8 @@ import DB from 'src/util/db.util';
 })
 export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) { }
   @WebSocketServer()
   server: Server;
