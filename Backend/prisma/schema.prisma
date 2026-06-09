@@ -24,6 +24,41 @@ model pixel {
   @@index([PIXEL_PAINTED_BY])
 }
 
+model canvas_snapshot {
+  snapshot_idx      Int       @id @default(autoincrement())
+  snapshot_cx       Int
+  snapshot_cy       Int
+  snapshot_size     Int
+  snapshot_version  Int
+  snapshot_payload  Bytes     @db.LongBlob
+  created_at        DateTime  @default(now())
+
+  version  snapshot_versions @relation(fields: [snapshot_version], references: [version_idx], onDelete: Cascade)
+
+  @@unique([snapshot_version, snapshot_cx, snapshot_cy])
+  @@index([snapshot_cx, snapshot_cy])
+  @@index([snapshot_version])
+}
+
+model canvas_events {
+  event_idx         Int       @id @default(autoincrement())
+  userId            Int
+  event_x           Int
+  event_y           Int
+  event_payload     Bytes     @db.LongBlob
+  created_at        DateTime  @default(now())
+
+  user             user      @relation(fields: [userId], references: [USER_INDEX], onDelete: Cascade)
+}
+
+model snapshot_versions {
+  version_idx       Int       @id @default(autoincrement())
+  created_at        DateTime  @default(now())
+  completed         Boolean   @default(false)
+
+  snapshots         canvas_snapshot[]
+}
+
 model user {
   USER_INDEX      Int      @id @default(autoincrement())
   USER_DISPLAY    String   @db.VarChar(16)
@@ -33,4 +68,5 @@ model user {
   USER_PAINTED    Int      @default(0)
 
   pixels          pixel[]
+  canvas_events   canvas_events[]
 }

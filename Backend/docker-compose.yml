@@ -1,15 +1,16 @@
-version: '3.8'
 services:
   app:
     build: .
+    command: sh -c "npx prisma db push && node dist/src/main"
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=mysql://root:1234@localhost:3306/hwplace
+      - DATABASE_URL=mysql://root:1234@mysql:3306/hwplace
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_USERNAME=default
       - REDIS_PASSWORD=1234
+      - CHUNK_SIZE=256
       - CANVAS_SIZE_X=1000
       - CANVAS_SIZE_Y=1000
       - WORKER_MAX_CONCURRENT=5
@@ -19,6 +20,8 @@ services:
     depends_on:
       redis:
         condition: service_started
+      mysql:
+        condition: service_healthy
     restart: unless-stopped
     
   redis:
@@ -30,5 +33,22 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  mysql:
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=hwplace
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p1234"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
   redis_data:
+  mysql_data:

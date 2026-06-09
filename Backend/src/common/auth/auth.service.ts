@@ -1,17 +1,18 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { GlobalResponse } from '../global/global-response.dto';
 import bcrypt from 'bcrypt';
-import DB from 'src/util/db.util';
 import { RegisterDTO } from './dto/register.dto';
 import { LoginDTO } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import log from 'spectra-log';
 import { ISC } from '../global/ISC';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
   ) { };
   async register(request: RegisterDTO) {
     /**
@@ -20,7 +21,7 @@ export class AuthService {
     let response: GlobalResponse = {};
     response.title = "회원가입"
 
-    const conflict = await DB.user.findFirst({
+    const conflict = await this.prisma.user.findFirst({
       where: {
         USER_EMAIL: request.email
       }
@@ -34,7 +35,7 @@ export class AuthService {
 
     const encryptedPass = await bcrypt.hash(request.password, 15);
 
-    await DB.user.create({
+    await this.prisma.user.create({
       data: {
         USER_EMAIL: request.email,
         USER_PASSWORD: encryptedPass,
@@ -49,10 +50,10 @@ export class AuthService {
   }
 
   async login(request: LoginDTO) {
-    let response: GlobalResponse = {};
+    const response: GlobalResponse = {};
     response.title = "로그인";
 
-    const exist = await DB.user.findFirst({
+    const exist = await this.prisma.user.findFirst({
       where: {
         USER_EMAIL: request.email
       }

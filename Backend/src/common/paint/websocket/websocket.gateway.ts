@@ -1,5 +1,3 @@
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   WebSocketGateway,
@@ -7,13 +5,12 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  OnGatewayInit,
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import log from 'spectra-log';
-import DB from 'src/util/db.util';
+import { CacheService } from 'src/cache/redis-cache.service';
 
 @WebSocketGateway({
   cors: {
@@ -25,7 +22,7 @@ import DB from 'src/util/db.util';
 export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly configService: ConfigService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    private readonly cacheService: CacheService,
   ) { }
   @WebSocketServer()
   server: Server;
@@ -45,8 +42,8 @@ Remain    : ${this.server.sockets.sockets.size}
     const CANVAS_SIZE_Y = this.configService.get<number>("CANVAS_SIZE_Y") ?? 500;
     const CHUNK_SIZE = this.configService.get<number>("CHUNK_SIZE") ?? 100;
 
-    const CHUNK_COUNT_X = CANVAS_SIZE_X / CHUNK_SIZE;
-    const CHUNK_COUNT_Y = CANVAS_SIZE_Y / CHUNK_SIZE;
+    const CHUNK_COUNT_X = Math.ceil(CANVAS_SIZE_X / CHUNK_SIZE);
+    const CHUNK_COUNT_Y = Math.ceil(CANVAS_SIZE_Y / CHUNK_SIZE);
 
     // 클라이언트 로딩 시작
     this.loadingClients.set(client.id, true);
@@ -69,27 +66,7 @@ Remain    : ${this.server.sockets.sockets.size}
               return;
             }
 
-            const pixels = await DB.pixel.findMany({
-              where: {
-                PIXEL_POS_Y: {
-                  gte: cy * CHUNK_SIZE,
-                  lt: Math.min((cy + 1) * CHUNK_SIZE, CANVAS_SIZE_X),
-                },
-                PIXEL_POS_X: {
-                  gte: cx * CHUNK_SIZE,
-                  lt: Math.min((cx + 1) * CHUNK_SIZE, CANVAS_SIZE_Y),
-                },
-              }
-            });
-
-            const formattedPixels = pixels.map(pixel => ({
-              posX: pixel.PIXEL_POS_X,
-              posY: pixel.PIXEL_POS_Y,
-              colorR: pixel.PIXEL_COLOR_R,
-              colorG: pixel.PIXEL_COLOR_G,
-              colorB: pixel.PIXEL_COLOR_B,
-              uuid: pixel.PIXEL_UUID
-            }));
+            const formattedPixels = await this.cacheService.getChunkPixels(cx, cy);
 
             // 다시 한번 연결 확인 후 emit
             if (this.loadingClients.get(client.id)) {

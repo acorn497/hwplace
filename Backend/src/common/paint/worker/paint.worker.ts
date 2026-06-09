@@ -1,11 +1,13 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
-import DB from "src/util/db.util";
 import { PaintPixelDTO } from "../dtos/paint.dto";
 import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { randomUUID } from "crypto";
 import log from "spectra-log";
 import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "src/prisma/prisma.service";
+import { CacheService } from "src/cache/redis-cache.service";
+import { EncodeService } from "src/util/encode.service";
 
 @Processor('paint-pixel')
 export class PaintPixelProcess extends WorkerHost {
@@ -14,6 +16,9 @@ export class PaintPixelProcess extends WorkerHost {
   constructor(
     private readonly wsGateway: WebsocketGateway,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly cacheService: CacheService,
+    private readonly encodeService: EncodeService,
   ) {
     super();
     this.WORKER_MAX_RETRY = this.configService.get<number>("WORKER_MAX_RETRY") ?? 3;
@@ -30,17 +35,39 @@ export class PaintPixelProcess extends WorkerHost {
           .map(p => `(${p.posX},${p.posY},${p.colorR},${p.colorG},${p.colorB},'${randomUUID()}', ${p.userIndex}, '${now}')`)
           .join(', ');
 
-        await DB.$executeRawUnsafe(`
-          INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID, PIXEL_PAINTED_BY, PIXEL_PAINTED_AT)
-          VALUES ${values}
-          ON DUPLICATE KEY UPDATE
-            PIXEL_COLOR_R = VALUES(PIXEL_COLOR_R),
-            PIXEL_COLOR_G = VALUES(PIXEL_COLOR_G),
-            PIXEL_COLOR_B = VALUES(PIXEL_COLOR_B),
-            PIXEL_UUID = VALUES(PIXEL_UUID),
-            PIXEL_PAINTED_BY = VALUES(PIXEL_PAINTED_BY),
-            PIXEL_PAINTED_AT = VALUES(PIXEL_PAINTED_AT)
-            `);
+        await this.prisma.$transaction([
+          this.prisma.$executeRawUnsafe(`
+            INSERT INTO pixel (PIXEL_POS_X, PIXEL_POS_Y, PIXEL_COLOR_R, PIXEL_COLOR_G, PIXEL_COLOR_B, PIXEL_UUID, PIXEL_PAINTED_BY, PIXEL_PAINTED_AT)
+            VALUES ${values}
+            ON DUPLICATE KEY UPDATE
+              PIXEL_COLOR_R = VALUES(PIXEL_COLOR_R),
+              PIXEL_COLOR_G = VALUES(PIXEL_COLOR_G),
+              PIXEL_COLOR_B = VALUES(PIXEL_COLOR_B),
+              PIXEL_UUID = VALUES(PIXEL_UUID),
+              PIXEL_PAINTED_BY = VALUES(PIXEL_PAINTED_BY),
+              PIXEL_PAINTED_AT = VALUES(PIXEL_PAINTED_AT)
+              `),
+          this.prisma.canvas_events.createMany({
+            data: job.data.pixels.map(p => ({
+              userId: p.userIndex,
+              event_x: p.posX,
+              event_y: p.posY,
+              event_payload: this.encodeService.serializeRgbPixel({
+                r: p.colorR,
+                g: p.colorG,
+                b: p.colorB,
+              }),
+            })),
+          }),
+        ]);
+
+        await this.cacheService.applyPixels(job.data.pixels.map(p => ({
+          x: p.posX,
+          y: p.posY,
+          r: p.colorR,
+          g: p.colorG,
+          b: p.colorB,
+        })));
 
         this.broadcast(job.data.pixels);
         log(`${job.data.pixels.length} pixels OK`, 200);

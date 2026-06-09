@@ -3,12 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { uptime } from 'process';
 import pkg from "../package.json"
 import { GlobalResponse } from './common/global/global-response.dto';
-import DB from './util/db.util';
+import { PrismaService } from './prisma/prisma.service';
 
 @Injectable()
 export class AppService {
   constructor(
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) { };
   getInfo() {
     const response: GlobalResponse = {};
@@ -40,7 +41,7 @@ export class AppService {
     const response: GlobalResponse = {};
     response.title = "pong";
 
-    const totalBatchedPixelCount = await DB.pixel.findMany({
+    const totalBatchedPixelCount = await this.prisma.pixel.findMany({
       select: {
         PIXEL_INDEX: true,
       },

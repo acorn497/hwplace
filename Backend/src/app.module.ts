@@ -8,7 +8,8 @@ import { WebsocketModule } from './common/paint/websocket/websocket.module';
 import { ConfigModule } from '@nestjs/config';
 import { WorkerModule } from './common/paint/worker/worker.module';
 import { JwtModule } from '@nestjs/jwt';
-import { PixelModule } from './common/pixel/pixel.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { CanvasModule } from './common/canvas/canvas.module';
 
 @Module({
   imports: [
@@ -16,12 +17,13 @@ import { PixelModule } from './common/pixel/pixel.module';
     PaintModule,
     WebsocketModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
     WorkerModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET ?? "TEMPORARY_SECRET",
     }),
-    PixelModule,
+    CanvasModule,
   ],
   controllers: [
     AppController,
