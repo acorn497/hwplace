@@ -1,6 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { GlobalResponse } from './common/global/global-response.dto';
 
 @Controller()
 export class AppController {
