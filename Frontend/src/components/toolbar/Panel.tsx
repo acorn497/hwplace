@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Tool } from "../../contexts/enums/Tool.enum";
 import { Service } from "./Panel/Service";
 import { Chat } from "./Panel/Chat";
@@ -8,11 +8,22 @@ import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { Setting } from "./Panel/Setting";
 import { Feedback } from "./Notification";
 
+// 다음 패널이 이전 패널 기준 어느 쪽에서 들어오는지를 나타내는 슬라이드 방향
 enum PanelAction {
   MOVE_RIGHT = -1,
   CENTER = 0,
   MOVE_LEFT = 1,
 }
+
+// Tool enum과 1:1로 대응하는 패널 목록. Tool.NONE(0)엔 표시할 패널이 없으므로 null.
+const PanelMap: (ReactNode | null)[] = [
+  null,
+  <Brush />,
+  <Chat />,
+  <Setting />,
+  <Profile />,
+  <Service />,
+];
 
 export const Panel = () => {
   const [currentTool, setCurrentTool] = useState<number>(0);
@@ -21,15 +32,6 @@ export const Panel = () => {
   const [sliding, setSliding] = useState(false);
 
   const { activeTool } = useGlobalVariable();
-
-  const PanelMap = [
-    '',
-    <Brush />,
-    <Chat />,
-    <Setting />,
-    <Profile />,
-    <Service />
-  ]
 
   useEffect(() => {
     if (activeTool === Tool.NONE) {
@@ -72,19 +74,19 @@ export const Panel = () => {
     }
   };
 
+  // 좌/중/우 3장을 겹쳐두고 트랙 전체를 슬라이드시켜 전환 효과를 낸다 (가운데 칸이 항상 currentTool).
+  const track = [activedTool, currentTool, activedTool];
+  const slideClassName = `p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`;
+
   return (
     <div>
       <Feedback />
-      <div className={`bg-white/80 backdrop-blur-md transition-normal duration-200 ease-in-out w-150 ${activeTool === 0 ? "h-0 border-0 border-slate-900/0 shadow-none" : "h-75 border border-slate-900/10 shadow-sm"} rounded-lg relative flex flex-row overflow-hidden`}>
-        <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
-          {PanelMap[activedTool]}
-        </div>
-        <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
-          {PanelMap[currentTool]}
-        </div>
-        <div className={`p-6 min-w-1/1 transition-transform ${sliding ? "duration-250" : "duration-0"} ${getTranslateX()} ease-in-out`}>
-          {PanelMap[activedTool]}
-        </div>
+      <div className={`bg-surface backdrop-blur-md transition-normal duration-200 ease-in-out w-150 ${activeTool === 0 ? "h-0 border-0 border-transparent shadow-none" : "h-75 border border-border shadow-sm"} rounded-lg relative flex flex-row overflow-hidden`}>
+        {track.map((toolIndex, i) => (
+          <div key={i} className={slideClassName}>
+            {PanelMap[toolIndex]}
+          </div>
+        ))}
       </div>
     </div>
   );

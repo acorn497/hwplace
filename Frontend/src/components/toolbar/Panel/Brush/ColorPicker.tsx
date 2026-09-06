@@ -242,9 +242,10 @@ const Pointer = ({ className, color, left, top = 0.5 }: PointerProps): JSX.Eleme
     left: `${left * 100}%`,
   };
 
+  // 포인터 링은 어떤 색 위에서도 대비가 나야 해서 고정 흰색/그림자 링을 쓴다 (테마 토큰이 아님)
   return (
     <div
-      className={`absolute z-1 box-border w-4 h-4 -translate-x-1/2 -translate-y-1/2 bg-white border-3 border-white rounded-full ] ${className || ''}`}
+      className={`absolute z-1 box-border w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_2px_#fff,0_0_0_3px_rgba(0,0,0,0.35)] ${className || ''}`}
       style={style}
     >
       <div
@@ -408,7 +409,7 @@ const SaturationBase = ({ hsva, onChange }: SaturationProps) => {
 
   return (
     <div
-      className="relative grow border-transparent rounded-md border-b-8 border-b-black shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
+      className="relative grow rounded-md border border-border shadow-sm overflow-hidden"
       style={containerStyle}
     >
       <Interactive
@@ -532,7 +533,7 @@ export const RgbColorPicker = ({
   const [hsva, updateHsva] = useColorManipulation(color, onChange);
 
   return (
-    <div {...rest} className={`relative flex flex-col w-55 h-26 select-none cursor-default overflow-hidden ${className || ''}`}>
+    <div {...rest} className={`relative flex flex-col w-full max-w-55 h-26 select-none cursor-default overflow-hidden ${className || ''}`}>
       <Saturation hsva={hsva} onChange={updateHsva} />
       <Hue hue={hsva.h} onChange={updateHsva} />
     </div>

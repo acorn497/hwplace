@@ -17,6 +17,9 @@ const REGISTER_STATUS: Record<string, string> = {
   'A110': "일치하는 이메일과 비밀번호를 찾지 못했습니다.",
 };
 
+const INPUT_CLASS =
+  "focus-ring w-full px-4 py-2.5 bg-surface-solid border border-border rounded-lg text-content placeholder:text-content-subtle transition-colors";
+
 export const RegisterForm = ({ setActive }: {
   setActive: (parameter: string) => void
 }) => {
@@ -33,10 +36,10 @@ export const RegisterForm = ({ setActive }: {
   useEffect(() => {
     switch (phase) {
       case 1:
-        passwordInputRef.current ? passwordInputRef.current.focus() : null;
+        passwordInputRef.current?.focus();
         break;
       case 2:
-        passwordConfirmInputRef.current ? passwordConfirmInputRef.current.focus() : null;
+        passwordConfirmInputRef.current?.focus();
         break;
     }
   }, [phase])
@@ -102,102 +105,112 @@ export const RegisterForm = ({ setActive }: {
     }
   }
 
+  const isNextDisabled =
+    isLoading
+    || (phase === 0 && !enteredEmail)
+    || (phase === 1 && !enteredPassword)
+    || (phase === TOTAL_PHASE && !enteredPasswordConfirm);
+
   return (
-    <>
-      {/* 폼 섹션 */}
-      <div className="w-full p-2">
-        <form className="flex flex-col gap-2" onKeyDown={handleKeyDown}>
-          {phase !== 0 ?
-            <div className="flex items-center gap-2 h-2">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="p-1 hover:bg-slate-100 rounded-md transition-colors"
-                aria-label="뒤로 가기"
-              >
-                <ChevronLeft className="w-5 h-5 text-slate-600" />
-              </button>
-              <div className="text-sm text-slate-600 truncate">{enteredEmail}</div>
-            </div>
-            : <div className="h-2" />
-          }
-          {/* Phase 0: 이메일 입력 */}
-          {phase === 0 && (
-            <div className="flex flex-col gap-2">
-              <label htmlFor="email" className="text-lg font-semibold text-slate-700 w-fit">이메일을 입력해주세요.</label>
-              <input
-                id="email"
-                type="email"
-                value={enteredEmail}
-                onChange={(e) => setEnteredEmail(e.target.value)}
-                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                placeholder="email@example.com"
-                required
-              />
-            </div>
-          )}
+    <div className="w-full min-w-0 p-2">
+      <form className="flex flex-col gap-2" onKeyDown={handleKeyDown}>
+        {phase !== 0 ?
+          <div className="flex items-center gap-2 h-2">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="focus-ring p-1 hover:bg-surface-hover rounded-md transition-colors cursor-pointer"
+              aria-label="뒤로 가기"
+            >
+              <ChevronLeft className="w-5 h-5 text-content-muted" />
+            </button>
+            <div className="text-sm text-content-muted truncate">{enteredEmail}</div>
+          </div>
+          : <div className="h-2" />
+        }
+        {/* Phase 0: 이메일 입력 */}
+        {phase === 0 && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="register-email" className="text-lg font-semibold text-content w-fit">
+              이메일을 입력해주세요.
+            </label>
+            <input
+              id="register-email"
+              type="email"
+              value={enteredEmail}
+              onChange={(e) => setEnteredEmail(e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="email@example.com"
+              required
+              autoComplete="email"
+            />
+          </div>
+        )}
 
-          {/* Phase 1: 비밀번호 입력 */}
-          {phase === 1 && (
-            <div className="flex flex-col gap-2">
+        {/* Phase 1: 비밀번호 입력 */}
+        {phase === 1 && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="register-password" className="text-lg font-semibold text-content w-fit">
+              새 비밀번호를 입력해주세요.
+            </label>
+            <input
+              ref={passwordInputRef}
+              id="register-password"
+              type="password"
+              value={enteredPassword}
+              onChange={(e) => setEnteredPassword(e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="••••••••••••"
+              required
+              autoComplete="new-password"
+            />
+          </div>
+        )}
 
-              <label htmlFor="password" className="text-lg font-semibold text-slate-700 w-fit">새 비밀번호를 입력해주세요.</label>
-              <input
-                ref={passwordInputRef}
-                id="password"
-                type="password"
-                value={enteredPassword}
-                onChange={(e) => setEnteredPassword(e.target.value)}
-                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                placeholder="••••••••••••"
-                required
-              />
-            </div>
-          )}
+        {/* Phase 2: 비밀번호 확인 */}
+        {phase === 2 && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="register-password-confirm" className="text-lg font-semibold text-content w-fit">
+              비밀번호를 다시 한번 입력해주세요.
+            </label>
+            <input
+              ref={passwordConfirmInputRef}
+              id="register-password-confirm"
+              type="password"
+              value={enteredPasswordConfirm}
+              onChange={(e) => setEnteredPasswordConfirm(e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="••••••••••••"
+              required
+              autoComplete="new-password"
+            />
+          </div>
+        )}
+      </form>
 
-          {/* Phase 2: 비밀번호 확인 */}
-          {phase === 2 && (
-            <div className="flex flex-col gap-2">
-
-              <label htmlFor="password" className="text-lg font-semibold text-slate-700 w-fit">비밀번호를 다시 한번 입력해주세요.</label>
-              <input
-                ref={passwordConfirmInputRef}
-                id="password"
-                type="password"
-                value={enteredPasswordConfirm}
-                onChange={(e) => setEnteredPasswordConfirm(e.target.value)}
-                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                placeholder="••••••••••••"
-                required
-              />
-            </div>
-          )}
-
-        </form>
-        <div className="relative flex flex-row h-14 justify-between items-center">
-          {/* 회원가입 링크 */}
-          {phase === 0 ?
-            <div className="text-center text-xs text-slate-600">
-              이미 계정이 있으신가요?{" "}
-              <button
-                onClick={() => setActive("Login")}
-                className="text-cyan-500 font-medium hover:text-cyan-600 hover:underline transition-colors">
-                로그인
-              </button>
-            </div>
-            : <div></div>
-          }
-          {/* 버튼 */}
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={isLoading || (phase === 0 && !enteredEmail) || (phase === TOTAL_PHASE && !enteredPassword)}
-            className="px-2 py-2 w-17 h-9 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 active:bg-cyan-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md"
-          >
-            {isLoading ? "..." : phase === TOTAL_PHASE ? "회원가입" : "다음"}
-          </button>
-        </div>
+      <div className="relative flex flex-row h-14 justify-between items-center gap-2">
+        {phase === 0 ?
+          <div className="text-center text-xs text-content-muted">
+            이미 계정이 있으신가요?{" "}
+            <button
+              type="button"
+              onClick={() => setActive("Login")}
+              className="focus-ring text-accent font-medium hover:underline transition-colors cursor-pointer"
+            >
+              로그인
+            </button>
+          </div>
+          : <div />
+        }
+        <button
+          type="button"
+          onClick={handleNext}
+          disabled={isNextDisabled}
+          className="focus-ring px-2 py-2 w-17 h-9 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-accent-hover active:bg-accent-active disabled:bg-border-strong disabled:text-content-subtle disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
+        >
+          {isLoading ? "..." : phase === TOTAL_PHASE ? "회원가입" : "다음"}
+        </button>
       </div>
-    </>
+    </div>
   )
 }

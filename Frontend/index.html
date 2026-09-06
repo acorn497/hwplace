@@ -5,6 +5,25 @@
     <link rel="icon" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HWplace</title>
+    <script>
+      // 최초 페인트 전에 테마를 확정해 흰 화면 깜빡임(FOUC)을 막는다.
+      // 저장 키는 src/contexts/Theme.context.tsx 의 THEME_STORAGE_KEY 와 반드시 동일해야 한다.
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var resolved = (saved === 'light' || saved === 'dark')
+            ? saved
+            : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.dataset.theme = resolved;
+          document.documentElement.style.colorScheme = resolved;
+          if (localStorage.getItem('reduceMotion') === 'true') {
+            document.documentElement.dataset.reduceMotion = 'true';
+          }
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

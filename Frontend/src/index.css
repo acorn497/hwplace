@@ -1,11 +1,160 @@
-/* @import "tailwindcss"; */
 @import "tailwindcss";
 
-@theme {
-  --color-primary-text: #1d293d;
-  --color-primary-border: color-mix(in oklab, var(--color-slate-900) /* oklch(20.8% 0.042 265.755) = #0f172b */ 10%, transparent);
-  --color-primary-modal: color-mix(in oklab, var(--color-white) 50%, transparent);
-  --color-primary-button: color-mix(in oklab, var(--color-blue-500), transparent)
+/*
+ ========== 다크 테마 variant ==================
+ <html data-theme="dark"> 가 세팅되면 dark: 유틸리티가 활성화된다.
+ 값은 Theme.context.tsx 가 세팅하고, 최초 페인트 전 index.html 인라인 스크립트가 선반영한다.
+
+ 대부분의 경우 dark: 를 직접 쓸 필요는 없다.
+ 아래 시맨틱 토큰(bg-surface, text-content ...)이 테마에 따라 알아서 바뀌기 때문이다.
+ dark: 는 토큰으로 표현이 안 되는 예외(그림자 세기, 특정 그라디언트 등)에만 사용할 것.
+*/
+@custom-variant dark (&:where(html[data-theme="dark"], html[data-theme="dark"] *));
+
+/*
+ ========== 시맨틱 컬러 토큰 ===================
+ @theme inline 은 값을 복사하지 않고 var() 참조를 유지하므로,
+ 아래 :root / [data-theme=dark] 블록만 바꾸면 전체 테마가 전환된다.
+*/
+@theme inline {
+  /* 표면 */
+  --color-app-bg: var(--hw-app-bg);
+  --color-surface: var(--hw-surface);
+  --color-surface-solid: var(--hw-surface-solid);
+  --color-surface-hover: var(--hw-surface-hover);
+  --color-surface-raised: var(--hw-surface-raised);
+
+  /* 테두리 */
+  --color-border: var(--hw-border);
+  --color-border-strong: var(--hw-border-strong);
+
+  /* 글자 */
+  --color-content: var(--hw-content);
+  --color-content-muted: var(--hw-content-muted);
+  --color-content-subtle: var(--hw-content-subtle);
+
+  /* 강조(액센트) */
+  --color-accent: var(--hw-accent);
+  --color-accent-hover: var(--hw-accent-hover);
+  --color-accent-active: var(--hw-accent-active);
+  --color-accent-fg: var(--hw-accent-fg);
+  --color-accent-soft: var(--hw-accent-soft);
+
+  /* 상태 */
+  --color-ok: var(--hw-ok);
+  --color-warn: var(--hw-warn);
+  --color-warn-surface: var(--hw-warn-surface);
+  --color-danger: var(--hw-danger);
+  --color-danger-surface: var(--hw-danger-surface);
+
+  /* 캔버스 주변 여백 */
+  --color-canvas-void: var(--hw-canvas-void);
+
+  /*
+    ---------- 구버전 별칭 (제거 예정) ----------
+    2.2.x 시절 이름. 마이그레이션 중 화면이 깨지지 않도록 새 토큰으로 연결만 해 둔다.
+    신규 코드에서는 절대 쓰지 말 것.
+  */
+  --color-primary-text: var(--hw-content);
+  --color-primary-border: var(--hw-border);
+  --color-primary-modal: var(--hw-surface);
+  --color-primary-button: var(--hw-accent-soft);
+}
+
+/* ---------- 라이트 (기본) ---------- */
+:root {
+  --hw-app-bg: #f8fafc;
+  --hw-surface: rgb(255 255 255 / 0.80);
+  --hw-surface-solid: #f1f5f9;
+  --hw-surface-hover: rgb(15 23 42 / 0.05);
+  --hw-surface-raised: rgb(255 255 255 / 0.95);
+
+  --hw-border: rgb(15 23 42 / 0.10);
+  --hw-border-strong: rgb(15 23 42 / 0.22);
+
+  --hw-content: #1d293d;
+  --hw-content-muted: #62748e;
+  --hw-content-subtle: #90a1b9;
+
+  --hw-accent: #06b6d4;
+  --hw-accent-hover: #0891b2;
+  --hw-accent-active: #0e7490;
+  --hw-accent-fg: #ffffff;
+  --hw-accent-soft: rgb(6 182 212 / 0.12);
+
+  --hw-ok: #16a34a;
+  --hw-warn: #d97706;
+  --hw-warn-surface: rgb(254 249 195 / 0.85);
+  --hw-danger: #dc2626;
+  --hw-danger-surface: rgb(254 226 226 / 0.85);
+
+  --hw-canvas-void: #e2e8f0;
+}
+
+/* ---------- 다크 ---------- */
+html[data-theme="dark"] {
+  --hw-app-bg: #0b1120;
+  --hw-surface: rgb(15 23 42 / 0.82);
+  --hw-surface-solid: #1e293b;
+  --hw-surface-hover: rgb(226 232 240 / 0.08);
+  --hw-surface-raised: rgb(30 41 59 / 0.95);
+
+  --hw-border: rgb(148 163 184 / 0.20);
+  --hw-border-strong: rgb(148 163 184 / 0.38);
+
+  --hw-content: #e2e8f0;
+  --hw-content-muted: #94a3b8;
+  --hw-content-subtle: #64748b;
+
+  /* 어두운 배경에서는 cyan-500이 탁해 보여 한 단계 밝게 쓰고, 글자는 어둡게 얹는다 */
+  --hw-accent: #22d3ee;
+  --hw-accent-hover: #67e8f9;
+  --hw-accent-active: #06b6d4;
+  --hw-accent-fg: #062c35;
+  --hw-accent-soft: rgb(34 211 238 / 0.16);
+
+  --hw-ok: #4ade80;
+  --hw-warn: #fbbf24;
+  --hw-warn-surface: rgb(120 53 15 / 0.55);
+  --hw-danger: #f87171;
+  --hw-danger-surface: rgb(127 29 29 / 0.55);
+
+  --hw-canvas-void: #0f172a;
+}
+
+html {
+  background-color: var(--hw-app-bg);
+}
+
+body {
+  color: var(--hw-content);
+}
+
+/*
+ ========== 접근성: 애니메이션 줄이기 ==============
+ - OS의 prefers-reduced-motion 설정을 기본으로 존중하고,
+ - 설정 패널의 수동 토글이 <html data-reduce-motion="true">를 세팅하면 이를 우선 적용한다.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -19,6 +168,24 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/*
+ ========== 유틸리티 ===========================
+*/
+
+/* 확대 시 픽셀이 뭉개지지 않도록 (캔버스 확대/축소에 필수) */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* 패널/툴바 공통 포커스 링 */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--hw-accent);
+  outline-offset: 1px;
+}
 
 /*
  ========== FONTS ==============================
