@@ -17,6 +17,9 @@ export const ISC = {
     EMAIL_CONFLICT: 'A100',
 
     INVALID_CREDENTIALS: 'A110',
+
+    /** 토큰은 유효하지만 그 유저가 더 이상 존재하지 않는다 (탈퇴/DB 초기화) */
+    USER_NOT_FOUND: 'A120',
   },
 
   VALIDATION: {

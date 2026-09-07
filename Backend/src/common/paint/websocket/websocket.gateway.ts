@@ -1,4 +1,3 @@
-import { ConfigService } from '@nestjs/config';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -11,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import log from 'spectra-log';
 import { CacheService } from 'src/cache/redis-cache.service';
+import { ChunkService } from 'src/util/chunk.service';
 
 @WebSocketGateway({
   cors: {
@@ -21,8 +21,8 @@ import { CacheService } from 'src/cache/redis-cache.service';
 })
 export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
-    private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
+    private readonly chunkService: ChunkService,
   ) { }
   @WebSocketServer()
   server: Server;
@@ -38,73 +38,10 @@ Connect   : ${client.id}
 Remain    : ${this.server.sockets.sockets.size}
       `);
 
-    const CANVAS_SIZE_X = this.configService.get<number>("CANVAS_SIZE_X") ?? 500;
-    const CANVAS_SIZE_Y = this.configService.get<number>("CANVAS_SIZE_Y") ?? 500;
-    const CHUNK_SIZE = this.configService.get<number>("CHUNK_SIZE") ?? 100;
-
-    const CHUNK_COUNT_X = Math.ceil(CANVAS_SIZE_X / CHUNK_SIZE);
-    const CHUNK_COUNT_Y = Math.ceil(CANVAS_SIZE_Y / CHUNK_SIZE);
-
-    // 클라이언트 로딩 시작
-    this.loadingClients.set(client.id, true);
-
-    try {
-      client.emit('chunk_start', {
-        chunkWidth: CHUNK_COUNT_X,
-        chunkHeight: CHUNK_COUNT_Y,
-        chunkSize: CHUNK_SIZE,
-      });
-      log("Sending chunks")
-
-      const chunkTasks: Array<() => Promise<void>> = [];
-
-      for (let cy = 0; cy < CHUNK_COUNT_Y; cy++) {
-        for (let cx = 0; cx < CHUNK_COUNT_X; cx++) {
-          chunkTasks.push(async () => {
-            if (!this.loadingClients.get(client.id)) {
-              log(`Client ${client.id} disconnected, stopping chunk load`);
-              return;
-            }
-
-            const formattedPixels = await this.cacheService.getChunkPixels(cx, cy);
-
-            // 다시 한번 연결 확인 후 emit
-            if (this.loadingClients.get(client.id)) {
-              client.emit('chunk_data', {
-                chunkNumber: cy * CHUNK_COUNT_X + cx,
-                chunkX: cx,
-                chunkY: cy,
-                pixels: formattedPixels,
-              });
-            }
-          });
-        }
-      }
-
-      // 한 번에 최대 5개씩 Promise 실행
-      const CONCURRENT_LIMIT = 20;
-      for (let i = 0; i < chunkTasks.length; i += CONCURRENT_LIMIT) {
-        if (!this.loadingClients.get(client.id)) {
-          log(`Client ${client.id} disconnected, aborting remaining chunks`);
-          break;
-        }
-
-        const batch = chunkTasks.slice(i, i + CONCURRENT_LIMIT);
-        await Promise.all(batch.map(task => task()));
-      }
-
-      // 모든 chunk 전송 완료 후 finish 이벤트 전송
-      if (this.loadingClients.get(client.id)) {
-        client.emit('chunk_finish');
-        log(`Finished sending chunks to ${client.id}`);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      // 로딩 완료 후 클라이언트 제거
-      this.loadingClients.delete(client.id);
-    }
+    // 청크는 클라이언트가 리스너 준비 후 request-chunks 로 요청할 때 보낸다.
+    this.broadcastOnlineUsers();
   }
+
   handleDisconnect(client: Socket) {
     // 로딩 중인 클라이언트 연결 끊김 처리
     if (this.loadingClients.has(client.id)) {
@@ -116,6 +53,110 @@ Remain    : ${this.server.sockets.sockets.size}
 Disconnect: ${client.id}
 Remain    : ${this.server.sockets.sockets.size}
       `);
+
+    this.broadcastOnlineUsers();
+  }
+
+  // 현재 접속자 수를 모든 클라이언트에게 브로드캐스트
+  private broadcastOnlineUsers() {
+    this.server.emit('server-information', {
+      onlineUsers: this.server.sockets.sockets.size,
+    });
+  }
+
+  /** 연결 성공 후 클라이언트가 요청하면 캔버스 청크를 전송한다. */
+  @SubscribeMessage('request-chunks')
+  async handleRequestChunks(
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (this.loadingClients.get(client.id)) {
+      log(`Client ${client.id} already loading chunks, ignoring duplicate request`);
+      return;
+    }
+
+    await this.sendChunksToClient(client);
+  }
+
+  /**
+   * 한 번의 MGET으로 읽어 한꺼번에 내보내는 청크 묶음 크기.
+   * 이 값이 청크 총 개수보다 작아야 실제로 스트리밍이 된다.
+   */
+  private static readonly CHUNK_BATCH_SIZE = 20;
+
+  private async sendChunksToClient(client: Socket) {
+    const { chunkSize, chunkCountX, chunkCountY, canvasWidth, canvasHeight } = this.chunkService;
+
+    this.loadingClients.set(client.id, true);
+
+    try {
+      // 부팅 로드가 끝나기 전에 보내면 흰 캔버스를 내려주게 된다. 준비될 때까지 기다린다.
+      if (!this.cacheService.isReady) {
+        log(`Cache not ready, holding chunk request from ${client.id}`);
+        await this.cacheService.whenReady();
+
+        // 기다리는 사이에 끊겼다면 보낼 필요가 없다.
+        if (!this.loadingClients.get(client.id)) {
+          log(`Client ${client.id} disconnected while waiting for cache`);
+          return;
+        }
+      }
+
+      // 캔버스 크기의 단일 출처는 서버다. 클라이언트가 청크 수 x 청크 크기로 역산하면
+      // 캔버스 변이 청크 크기의 배수가 아닐 때 어긋나므로 실제 크기를 그대로 내려준다.
+      client.emit('chunk_start', {
+        canvasWidth,
+        canvasHeight,
+        chunkSize,
+        chunkCountX,
+        chunkCountY,
+        totalChunks: chunkCountX * chunkCountY,
+      });
+      log("Sending chunks");
+
+      const coordinates: Array<{ cx: number; cy: number }> = [];
+      for (let cy = 0; cy < chunkCountY; cy++) {
+        for (let cx = 0; cx < chunkCountX; cx++) {
+          coordinates.push({ cx, cy });
+        }
+      }
+
+      for (let i = 0; i < coordinates.length; i += WebsocketGateway.CHUNK_BATCH_SIZE) {
+        if (!this.loadingClients.get(client.id)) {
+          log(`Client ${client.id} disconnected, aborting remaining chunks`);
+          break;
+        }
+
+        const batch = coordinates.slice(i, i + WebsocketGateway.CHUNK_BATCH_SIZE);
+        const buffers = await this.cacheService.getChunkBuffers(batch);
+
+        if (!this.loadingClients.get(client.id)) {
+          log(`Client ${client.id} disconnected, aborting remaining chunks`);
+          break;
+        }
+
+        batch.forEach(({ cx, cy }, index) => {
+          // 원본 RGB 버퍼를 그대로 실어 보낸다. socket.io가 바이너리 프레임으로 처리한다.
+          client.emit('chunk_data', {
+            chunkNumber: cy * chunkCountX + cx,
+            chunkX: cx,
+            chunkY: cy,
+            width: this.chunkService.getChunkWidth(cx),
+            height: this.chunkService.getChunkHeight(cy),
+            data: buffers[index],
+          });
+        });
+      }
+
+      if (this.loadingClients.get(client.id)) {
+        client.emit('chunk_finish');
+        log(`Finished sending chunks to ${client.id}`);
+      }
+    } catch (error) {
+      console.error(error);
+      client.emit('chunk_error', { message: '캔버스 데이터를 전송하지 못했습니다.' });
+    } finally {
+      this.loadingClients.delete(client.id);
+    }
   }
 
   @SubscribeMessage('send-message')
@@ -134,6 +175,9 @@ Remain    : ${this.server.sockets.sockets.size}
   handleInformation(
     @ConnectedSocket() client: Socket,
   ) {
-    this.server
+    // 요청한 클라이언트에게만 현재 서버 정보(접속자 수)를 응답
+    client.emit('server-information', {
+      onlineUsers: this.server.sockets.sockets.size,
+    });
   }
 }

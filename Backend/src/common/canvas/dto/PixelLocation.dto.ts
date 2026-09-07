@@ -1,11 +1,16 @@
-import { IsNotEmpty, IsNumber } from "class-validator";
+import { Type } from "class-transformer";
+import { IsInt, IsNotEmpty, Min } from "class-validator";
 
 export class PixelLocation {
   @IsNotEmpty()
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   x!: number;
 
   @IsNotEmpty()
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   y!: number;
 }

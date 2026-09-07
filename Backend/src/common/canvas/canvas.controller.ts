@@ -1,8 +1,6 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { CanvasService } from './canvas.service';
-import { AuthGuard } from '../auth/guard/jwt.guard';
 import { PixelLocation } from './dto/PixelLocation.dto';
-import { FullPixel } from './dto/FullPixel.dto';
 
 @Controller('canvas')
 export class CanvasController {
@@ -10,15 +8,10 @@ export class CanvasController {
     private readonly canvasService: CanvasService,
   ) { };
 
-  // 이 컨트롤러는 앞으로 픽셀 처리 API와 픽셀 데이터를 반환하는 역할을 수행합니다.
-  @Post('/paint')
-  @UseGuards(AuthGuard)
-  async paintCanvas(@Body() body: FullPixel[]) {
-    return this.canvasService.paintPixel(body);
-  }
-
+  // 픽셀 칠하기는 PaintController(POST /paint)가 큐를 통해 처리한다.
+  // 여기 있던 POST /canvas/paint 는 본문이 비어 있어 인증만 통과하면 조용히 성공하던 죽은 경로라 제거했다.
   @Get('/pixel')
-  async getPixelInformation(@Body() body: PixelLocation) {
-    return this.canvasService.getPixelInformation(body.x, body.y);
+  async getPixelInformation(@Query() query: PixelLocation) {
+    return this.canvasService.getPixelInformation(query.x, query.y);
   }
 }

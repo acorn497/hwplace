@@ -11,7 +11,7 @@ export class EncodeService {
 /**
  * 픽셀 데이터 직렬화 함수
  */
-  serealizePixel(pixels: CompressedPixel[]) {
+  serializePixels(pixels: CompressedPixel[]) {
     const buffer = Buffer.allocUnsafe(pixels.length * BYTES_PER_PIXEL);
 
     pixels.forEach((pixel, index) => {
