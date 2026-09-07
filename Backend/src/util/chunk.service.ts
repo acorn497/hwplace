@@ -12,9 +12,12 @@ export class ChunkService {
   constructor(
     private readonly configService: ConfigService,
   ) {
-    this.chunkSize = configService.getOrThrow<number>('CHUNK_SIZE');
-    this.canvasWidth = configService.getOrThrow<number>('CANVAS_SIZE_X');
-    this.canvasHeight = configService.getOrThrow<number>('CANVAS_SIZE_Y');
+    // 환경변수는 문자열로 들어오고 getOrThrow<number>() 는 변환하지 않는다.
+    // 지금은 비교/사칙연산이 강제 변환 덕에 우연히 동작하지만,
+    // 이 값들은 캔버스 크기 계산 전반에 쓰이므로 여기서 확실히 숫자로 만든다.
+    this.chunkSize = Number(configService.getOrThrow('CHUNK_SIZE'));
+    this.canvasWidth = Number(configService.getOrThrow('CANVAS_SIZE_X'));
+    this.canvasHeight = Number(configService.getOrThrow('CANVAS_SIZE_Y'));
     this.chunkCountX = Math.ceil(this.canvasWidth / this.chunkSize);
     this.chunkCountY = Math.ceil(this.canvasHeight / this.chunkSize);
   };

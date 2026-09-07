@@ -27,6 +27,9 @@ export const ISC = {
 
     /** 관리자 권한이 필요한 요청을 일반 유저가 보냈다 */
     FORBIDDEN: 'A140',
+
+    /** 자동 남용 탐지로 제재되었다 */
+    AUTO_RESTRICTED: 'A150',
   },
 
   VALIDATION: {
@@ -48,6 +51,15 @@ export const ISC = {
   PIXEL: {
     FOUND_DATA: 'C100',
     NO_DATA: 'C101',
+
+    /** 칠하기 쿼터를 모두 사용했다 */
+    QUOTA_EXCEEDED: 'C110',
+
+    /** 한 요청에 담을 수 있는 픽셀 수를 넘었다 */
+    TOO_MANY_PIXELS: 'C111',
+
+    /** 요청 빈도 제한(IP 기준)에 걸렸다 */
+    RATE_LIMITED: 'C112',
   },
 
   ADMIN: {

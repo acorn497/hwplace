@@ -10,13 +10,43 @@ services:
       - REDIS_PORT=6379
       - REDIS_USERNAME=default
       - REDIS_PASSWORD=1234
+
+      # 인증
+      - JWT_SECRET=${JWT_SECRET:-CHANGE_ME_BEFORE_DEPLOY}
+
+      # 캔버스
+      # 주의: 기존 데이터보다 작게 줄이면 범위 밖 픽셀은 화면에서 사라진다.
+      # (이력은 canvas_events 에 남으므로 크기를 되돌리면 복원된다)
       - CHUNK_SIZE=64
       - CANVAS_SIZE_X=1024
       - CANVAS_SIZE_Y=1024
-      - WORKER_MAX_CONCURRENT=5
-      - WORKER_MAX_BATCH_SIZE=750
-      - WORKER_BATCH_TIMEOUT=100
+
+      # 워커
+      # 코드가 읽는 이름은 WORKER_BATCH_SIZE 다.
+      - WORKER_BATCH_SIZE=750
       - WORKER_MAX_RETRY=3
+
+      # 요청 본문 크기
+      # 픽셀 하나가 JSON 약 65바이트라, 50mb 면 요청 하나에 80만 픽셀(캔버스의 77%)이 담긴다.
+      # 컨트롤러가 개수를 세기 전에 파싱이 끝나므로 입구에서 줄인다.
+      - BODY_SIZE_LIMIT=4mb
+
+      # 칠하기 쿼터 (유저별) — 10분당 20,000 픽셀
+      - PAINT_QUOTA_WINDOW_SECONDS=600
+      - PAINT_QUOTA_PIXELS=20000
+
+      # 자동 제재 
+      - PAINT_AUTO_RESTRICT=true
+      - PAINT_ABUSE_STRIKES=20
+      - PAINT_ABUSE_WINDOW_SECONDS=300
+
+      # IP별 요청 수 제한 (초 / 분 / 시간)
+      - THROTTLE_SHORT=20
+      - THROTTLE_MEDIUM=300
+      - THROTTLE_LONG=5000
+      # 회원가입은 bcrypt 때문에 1건에 1.7초쯤 걸려 위 창들에 걸리지 않는다.
+      # 계정을 대량으로 찍어 유저별 쿼터를 우회하는 것을 막는 별도 제한이다.
+      - THROTTLE_REGISTER=5
     depends_on:
       redis:
         condition: service_started

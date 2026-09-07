@@ -94,6 +94,11 @@ export const Brush = () => {
 
   // 칠하기 요청 진행 중 여부 -- 중복 제출 방지
   const [isPaintPending, setIsPaintPending] = useState(false);
+  /**
+   * 남은 칠하기 쿼터. null 이면 아직 모른다(비로그인이거나 조회 전).
+   * 서버가 단일 출처이고, 여기 값은 표시 전용이다.
+   */
+  const [quota, setQuota] = useState<{ limit: number; remaining: number; resetAfter: number } | null>(null);
   /** 나눠 보내는 중일 때의 진행 상황 (버튼에 표시) */
   const [paintProgress, setPaintProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -196,6 +201,25 @@ export const Brush = () => {
     });
   };
 
+  /* 남은 쿼터를 서버에서 가져온다. 표시가 실제와 어긋나지 않게 칠한 뒤에도 갱신한다. */
+  const refreshQuota = useCallback(async () => {
+    if (!accessToken) {
+      setQuota(null);
+      return;
+    }
+
+    const result = await apiFetch(FetchMethod.GET, '/paint/quota');
+    if (result.internalStatusCode !== '0000') return;
+
+    setQuota({
+      limit: result.data.limit,
+      remaining: result.data.remaining,
+      resetAfter: result.data.resetAfter,
+    });
+  }, [accessToken]);
+
+  useEffect(() => { void refreshQuota(); }, [refreshQuota]);
+
   const handlePaintPixels = async () => {
     if (selectedPixels.length === 0 || isPaintPending) return;
 
@@ -235,11 +259,29 @@ export const Brush = () => {
         if (!status?.match('0000')) {
           failedFrom = sent;
           failMessage = result.message || '칠하기에 실패했습니다. 잠시 후 다시 시도해주세요.';
+
+          // 한도 초과로 막힌 경우 서버가 남은 쿼터/회복 시간을 함께 준다.
+          if (result.data?.limit !== undefined) {
+            setQuota({
+              limit: result.data.limit,
+              remaining: result.data.remaining ?? 0,
+              resetAfter: result.data.resetAfter ?? 0,
+            });
+          }
           break;
         }
 
         sent += chunk.length;
         setPaintProgress({ done: sent, total: paintRequest.length });
+
+        // 서버가 매 응답에 남은 쿼터를 실어준다. 별도 조회 없이 그대로 반영한다.
+        if (result.data?.quota) {
+          setQuota({
+            limit: result.data.quota.limit,
+            remaining: result.data.quota.remaining,
+            resetAfter: result.data.quota.resetAfter,
+          });
+        }
       }
 
       if (failedFrom >= 0) {
@@ -256,6 +298,7 @@ export const Brush = () => {
       }
 
       setNotification({ title: '칠하기', content: `${sent.toLocaleString()}개의 픽셀을 칠했습니다.` });
+      void refreshQuota();
       pushRecentColor(currentColor);
       setSelectedPixels([]);
     } catch {
@@ -337,6 +380,12 @@ export const Brush = () => {
 
   // 색 면 위에 글자를 얹으므로 배경 밝기에 따라 대비색을 고른다 (테마 토큰이 아니라 고정색)
   const swatchTextClass = isLightColor(currentColor) ? 'text-black/70' : 'text-white/85';
+
+  // 선택한 픽셀이 남은 쿼터를 넘으면 칠하기 전에 알려준다.
+  const quotaShortage = quota !== null && selectedPixels.length > quota.remaining;
+  const quotaPercent = quota !== null && quota.limit > 0
+    ? Math.max(0, Math.min(100, (quota.remaining / quota.limit) * 100))
+    : 0;
 
   const dragMeta = DRAG_MODE_META[dragMode] ?? DRAG_MODE_META[DragMode.NONE];
   const DragIcon = dragMeta.icon;
@@ -497,6 +546,33 @@ export const Brush = () => {
               fullWidth
               className="py-2"
             />
+
+            {/*
+              남은 칠하기 쿼터.
+              한도에 부딪히고 나서야 알게 되면 "왜 안 되지"가 되므로 미리 보여준다.
+              선택한 픽셀이 남은 쿼터를 넘으면 색으로 경고한다.
+            */}
+            {quota ?
+              <div className="flex flex-col gap-1 px-0.5 shrink-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-[11px] text-content-muted">남은 픽셀</span>
+                  <span className={`text-[11px] font-semibold tabular-nums ${quotaShortage ? 'text-danger' : 'text-content'}`}>
+                    {quota.remaining.toLocaleString()} / {quota.limit.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-1 w-full rounded-full bg-surface-hover overflow-hidden" role="presentation">
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-300 ${quotaShortage ? 'bg-danger' : 'bg-accent'}`}
+                    style={{ width: `${quotaPercent}%` }}
+                  />
+                </div>
+                {quota.remaining === 0 && quota.resetAfter > 0 ?
+                  <span className="text-[10px] text-content-subtle">
+                    약 {Math.ceil(quota.resetAfter / 60)}분 후 회복
+                  </span>
+                  : null}
+              </div>
+              : null}
 
             {/* 보조 도구 */}
             <div className="grid grid-cols-2 gap-2">

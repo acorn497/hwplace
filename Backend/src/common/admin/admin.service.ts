@@ -8,6 +8,7 @@ import { EncodeService } from 'src/util/encode.service';
 import { GlobalResponse } from '../global/global-response.dto';
 import { ISC } from '../global/ISC';
 import { WebsocketGateway } from '../paint/websocket/websocket.gateway';
+import { AbuseDetectorService } from '../paint/quota/abuse-detector.service';
 import {
   ChangeRoleDTO,
   ClearAreaDTO,
@@ -24,6 +25,9 @@ export const AdminAction = {
   CLEAR_AREA: 'CLEAR_AREA',
   ROLLBACK_USER: 'ROLLBACK_USER',
 } as const;
+
+/** 사람이 아니라 서버가 수행하는 동작. 로그에서 '삭제된 관리자'로 오해되면 안 된다. */
+const SYSTEM_ACTIONS = new Set(['AUTO_RESTRICT']);
 
 /** 영역 초기화의 기본 색(흰색) — 캔버스 초기 상태와 같다 */
 const DEFAULT_CLEAR_COLOR = { r: 255, g: 255, b: 255 };
@@ -46,6 +50,7 @@ export class AdminService {
     private readonly chunkService: ChunkService,
     private readonly encodeService: EncodeService,
     private readonly wsGateway: WebsocketGateway,
+    private readonly abuseDetector: AbuseDetectorService,
   ) { }
 
   /* ------------------------------------------------------------------ *
@@ -119,6 +124,12 @@ export class AdminService {
       where: { USER_INDEX: targetIndex },
       data: { USER_RESTRICTED: request.restricted },
     });
+
+    // 제재를 풀 때 누적된 쿼터 위반 기록도 함께 지운다.
+    // 남겨두면 다음 위반 한 번에 임계치를 다시 넘겨 즉시 자동 제재된다.
+    if (!request.restricted) {
+      await this.abuseDetector.clearViolations(targetIndex);
+    }
 
     await this.writeLog(adminIndex, request.restricted ? AdminAction.BAN : AdminAction.UNBAN, targetIndex, {
       email: target.USER_EMAIL,
@@ -377,7 +388,10 @@ export class AdminService {
         logs: logs.map(entry => ({
           index: entry.log_idx,
           action: entry.action,
-          admin: entry.admin?.USER_DISPLAY ?? '(삭제된 관리자)',
+          // admin_id 가 비어 있는 경우는 둘이다: 시스템이 한 일(자동 제재)과
+          // 관리자 계정이 지워진 경우. 앞을 '삭제된 관리자'로 보여주면 사실과 다르다.
+          admin: entry.admin?.USER_DISPLAY
+            ?? (SYSTEM_ACTIONS.has(entry.action) ? '시스템(자동)' : '(삭제된 관리자)'),
           targetUser: entry.target_user,
           detail: entry.detail,
           createdAt: entry.created_at,

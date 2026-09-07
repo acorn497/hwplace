@@ -18,6 +18,7 @@ const ACTION_LABEL: Record<string, string> = {
   ROLE_CHANGE: '권한 변경',
   CLEAR_AREA: '영역 초기화',
   ROLLBACK_USER: '픽셀 롤백',
+  AUTO_RESTRICT: '자동 제재',
 };
 
 /** 위험한 동작은 눈에 띄게 */
@@ -25,6 +26,7 @@ const ACTION_TONE: Record<string, string> = {
   BAN: 'bg-danger text-app-bg',
   CLEAR_AREA: 'bg-danger text-app-bg',
   ROLLBACK_USER: 'bg-warn text-app-bg',
+  AUTO_RESTRICT: 'bg-danger text-app-bg',
 };
 
 const summarize = (entry: LogEntry) => {
@@ -38,6 +40,8 @@ const summarize = (entry: LogEntry) => {
       return `${detail.email ?? ''} · ${Number(detail.pixels ?? 0).toLocaleString()}px`;
     case 'ROLE_CHANGE':
       return `${detail.email ?? ''} · ${detail.from} → ${detail.to}`;
+    case 'AUTO_RESTRICT':
+      return `${detail.email ?? ''} · 쿼터 ${detail.strikes}회 초과`;
     default:
       return detail.email ?? '';
   }

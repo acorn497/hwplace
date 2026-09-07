@@ -29,7 +29,7 @@ export class PaintPixelProcess extends WorkerHost {
     private readonly encodeService: EncodeService,
   ) {
     super();
-    this.WORKER_MAX_RETRY = this.configService.get<number>("WORKER_MAX_RETRY") ?? 3;
+    this.WORKER_MAX_RETRY = Number(this.configService.get("WORKER_MAX_RETRY") ?? 3);
   }
 
   async process(job: Job): Promise<any> {
