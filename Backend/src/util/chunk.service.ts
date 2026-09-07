@@ -19,6 +19,21 @@ export class ChunkService {
     this.chunkCountY = Math.ceil(this.canvasHeight / this.chunkSize);
   };
 
+  /**
+   * 좌표가 현재 캔버스 안에 있는지.
+   *
+   * 캔버스 크기는 환경변수라 배포마다 달라질 수 있는데, DB의 픽셀/이벤트 이력은 그대로 남는다.
+   * 캔버스를 줄여서 재배포하면 범위 밖 좌표가 그대로 재생되고,
+   * 그 좌표의 청크는 getChunkPixelCount가 0이라 0바이트 버퍼가 만들어져
+   * 첫 쓰기에서 ERR_BUFFER_OUT_OF_BOUNDS로 부팅이 죽는다.
+   * 버퍼에 쓰기 전에 반드시 이걸로 거른다.
+   */
+  isInBounds(posX: number, posY: number) {
+    return Number.isInteger(posX) && Number.isInteger(posY)
+      && posX >= 0 && posX < this.canvasWidth
+      && posY >= 0 && posY < this.canvasHeight;
+  }
+
   getChunkCoordinate(posX: number, posY: number) {
     return { cx: Math.floor(posX / this.chunkSize), cy: Math.floor(posY / this.chunkSize) }
   }

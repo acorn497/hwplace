@@ -6,6 +6,9 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { ChunkService } from "src/util/chunk.service";
 import { EncodeService } from "src/util/encode.service";
 
+/** RGB 픽셀 하나가 차지하는 바이트 수 (EncodeService와 같은 값) */
+const BYTES_PER_RGB_PIXEL = 3;
+
 interface CachePixel {
   x: number;
   y: number;
@@ -80,7 +83,26 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private normalizeChunkPayload(payload: Buffer | Uint8Array | null | undefined, cx: number, cy: number) {
-    if (payload) return Buffer.from(payload);
+    const expectedBytes = this.chunkService.getChunkPixelCount(cx, cy) * BYTES_PER_RGB_PIXEL;
+
+    if (payload) {
+      const buffer = Buffer.from(payload);
+
+      // 저장된 청크의 크기가 지금 기대하는 크기와 다를 수 있다.
+      // (캔버스 크기 설정을 바꾼 뒤 예전 스냅샷을 읽는 경우 — 특히 가장자리 청크)
+      // 크기가 어긋난 버퍼를 그대로 쓰면 화면이 어긋나거나 쓰기에서 범위를 벗어난다.
+      // 기대 크기에 맞춰 자르거나(넘칠 때) 흰색으로 채워 늘린다(모자랄 때).
+      if (buffer.length === expectedBytes) return buffer;
+
+      log(`Chunk (${cx},${cy}) size mismatch: ${buffer.length} != ${expectedBytes}. Resizing.`, 400, 'ERROR');
+
+      const resized = this.encodeService.createRgbChunk(
+        this.chunkService.getChunkPixelCount(cx, cy),
+      );
+      buffer.copy(resized, 0, 0, Math.min(buffer.length, expectedBytes));
+
+      return resized;
+    }
 
     return this.encodeService.createRgbChunk(
       this.chunkService.getChunkPixelCount(cx, cy),
@@ -201,6 +223,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     const latestByCoordinate = new Map<string, CachePixel>();
     let cursor: number | undefined;
     let scanned = 0;
+    let outOfBounds = 0;
 
     for (;;) {
       const page = await this.prismaService.canvas_events.findMany({
@@ -226,6 +249,13 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
           continue;
         }
 
+        // 캔버스보다 큰 좌표의 이력이 남아 있을 수 있다(캔버스를 줄여서 재배포한 경우).
+        // 그대로 쓰면 0바이트 청크 버퍼에 써서 부팅이 죽으므로 세어만 두고 건너뛴다.
+        if (!this.chunkService.isInBounds(change.event_x, change.event_y)) {
+          outOfBounds++;
+          continue;
+        }
+
         latestByCoordinate.set(`${change.event_x},${change.event_y}`, {
           x: change.event_x,
           y: change.event_y,
@@ -241,6 +271,13 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       if (page.length < CacheService.EVENT_REPLAY_PAGE_SIZE) break;
     }
 
+    // 조용히 버리면 캔버스가 잘려 보이는 이유를 알 수 없다. 한 줄로 분명히 남긴다.
+    if (outOfBounds > 0) {
+      log(`Skipped ${outOfBounds} events outside the current canvas `
+        + `(${this.chunkService.canvasWidth}x${this.chunkService.canvasHeight}). `
+        + `캔버스 크기 설정(CANVAS_SIZE_X/Y)이 기존 데이터보다 작은지 확인하세요.`, 400, 'ERROR');
+    }
+
     if (latestByCoordinate.size === 0) {
       log('No canvas events to replay.');
       return 0;
@@ -253,6 +290,8 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   public async applyPixel(pixel: CachePixel) {
+    if (!this.chunkService.isInBounds(pixel.x, pixel.y)) return;
+
     const { cx, cy } = this.chunkService.getChunkCoordinate(pixel.x, pixel.y);
     const { x, y } = this.chunkService.getInChunkCoordinate(pixel.x, pixel.y);
     const chunkWidth = this.chunkService.getChunkWidth(cx);
@@ -267,6 +306,9 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     const chunks = new Map<string, Buffer>();
 
     for (const pixel of pixels) {
+      // 캔버스 밖 좌표는 쓸 청크가 없다. 한 픽셀 때문에 배치 전체를 죽이지 않는다.
+      if (!this.chunkService.isInBounds(pixel.x, pixel.y)) continue;
+
       const { cx, cy } = this.chunkService.getChunkCoordinate(pixel.x, pixel.y);
       const { x, y } = this.chunkService.getInChunkCoordinate(pixel.x, pixel.y);
       const chunkKey = this.getChunkKey(cx, cy);
