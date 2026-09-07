@@ -23,6 +23,21 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     localStorage.setItem('accessToken', accessToken);
   }, [accessToken]);
+
+  /**
+   * 서버가 401을 돌려주면(계정 삭제 등으로 토큰이 무효해진 경우)
+   * useFetch가 저장소를 비우고 이 이벤트를 쏜다. 화면 상태도 함께 로그아웃으로 되돌린다.
+   */
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setAccessToken('');
+      setUsername('');
+      setEmail('');
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, []);
   
   const value: AuthContextType = {
     username, setUsername,

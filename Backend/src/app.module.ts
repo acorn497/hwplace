@@ -10,6 +10,8 @@ import { WorkerModule } from './common/paint/worker/worker.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from './prisma/prisma.module';
 import { CanvasModule } from './common/canvas/canvas.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ReplayModule } from './common/replay/replay.module';
 
 @Module({
   imports: [
@@ -17,6 +19,7 @@ import { CanvasModule } from './common/canvas/canvas.module';
     PaintModule,
     WebsocketModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     WorkerModule,
     JwtModule.register({
@@ -24,6 +27,7 @@ import { CanvasModule } from './common/canvas/canvas.module';
       secret: process.env.JWT_SECRET ?? "TEMPORARY_SECRET",
     }),
     CanvasModule,
+    ReplayModule,
   ],
   controllers: [
     AppController,

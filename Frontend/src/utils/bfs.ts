@@ -1,6 +1,20 @@
-import { Pixel } from "../contexts/interfaces/Pixel.interface";
+import { PixelColor } from "../contexts/interfaces/Pixel.interface";
 
-export const BFS = (startX: number, startY: number, targetColor: { r: number, g: number, b: number }, pixelMap: Map<string, Pixel>, canvasWidth: number, canvasHeight: number) => {
+/**
+ * 시작 좌표와 같은 색으로 이어진 영역을 훑는다.
+ *
+ * 픽셀 저장소가 Map에서 평면 버퍼로 바뀌었으므로 자료구조 대신 조회 함수를 받는다.
+ * (미도색 좌표는 조회 함수가 흰색을 돌려주기로 약속되어 있다)
+ */
+export const BFS = (
+  startX: number,
+  startY: number,
+  targetColor: PixelColor,
+  getPixelColor: (x: number, y: number) => PixelColor,
+  canvasWidth: number,
+  canvasHeight: number,
+) => {
+  const limit = Number(import.meta.env.VITE_BFS_SIZE ?? 500);
   const queue: { x: number, y: number }[] = [];
   let head = 0;
   queue.push({ x: startX, y: startY });
@@ -14,17 +28,10 @@ export const BFS = (startX: number, startY: number, targetColor: { r: number, g:
   visited.add(`${startX},${startY}`);
 
   while (queue.length > head) {
-    if (result.length >= (import.meta.env.VITE_BFS_SIZE ?? 500)) break;
+    if (result.length >= limit) break;
 
     const item = queue[head++];
-    const itemKey = `${item.x},${item.y}`;
-
-    const currentPixel = pixelMap.get(itemKey);
-    const currentColor = {
-      r: currentPixel?.colorR ?? 255,
-      g: currentPixel?.colorG ?? 255,
-      b: currentPixel?.colorB ?? 255
-    };
+    const currentColor = getPixelColor(item.x, item.y);
 
     if (currentColor.r !== targetColor.r || currentColor.g !== targetColor.g || currentColor.b !== targetColor.b) {
       continue;

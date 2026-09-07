@@ -5,6 +5,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '../auth/guard/jwt.guard';
 import { JobType, JobWithUserType } from './job.interface';
+import { GlobalResponse } from '../global/global-response.dto';
+import { ISC } from '../global/ISC';
 
 @Controller('paint')
 export class PaintController {
@@ -33,6 +35,18 @@ export class PaintController {
     }
     await this.paintPixelQueue.addBulk(jobs);
 
-    return { success: true, batches: Math.ceil(pixelsWithUser.length / this.BATCH_SIZE) }
+    // 프론트는 internalStatusCode 로 성공 여부를 가린다.
+    // 이 필드가 빠지면 큐 적재에 성공해도 UI가 실패로 처리하므로 반드시 담아 보낸다.
+    const response: GlobalResponse = {
+      title: '칠하기',
+      message: `${pixelsWithUser.length}개의 픽셀을 칠했습니다.`,
+      internalStatusCode: ISC.SUCCESS,
+      data: {
+        pixels: pixelsWithUser.length,
+        batches: jobs.length,
+      },
+    };
+
+    return response;
   }
 }

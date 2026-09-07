@@ -242,9 +242,10 @@ const Pointer = ({ className, color, left, top = 0.5 }: PointerProps): JSX.Eleme
     left: `${left * 100}%`,
   };
 
+  // 포인터 링은 어떤 색 위에서도 대비가 나야 해서 고정 흰색/그림자 링을 쓴다 (테마 토큰이 아님)
   return (
     <div
-      className={`absolute z-1 box-border w-4 h-4 -translate-x-1/2 -translate-y-1/2 bg-white border-3 border-white rounded-full ] ${className || ''}`}
+      className={`absolute z-1 box-border w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_2px_#fff,0_0_0_3px_rgba(0,0,0,0.35)] ${className || ''}`}
       style={style}
     >
       <div
@@ -404,11 +405,15 @@ const SaturationBase = ({ hsva, onChange }: SaturationProps) => {
   const containerStyle = {
     backgroundColor: hsvaToRgbString({ h: hsva.h, s: 100, v: 100, a: 1 }),
     backgroundImage: 'linear-gradient(to top, #000, rgba(0, 0, 0, 0)), linear-gradient(to right, #fff, rgba(255, 255, 255, 0))',
+    // background-image의 기본 clip은 padding-box라 테두리 두께만큼 그라디언트가 닿지 않는다.
+    // (특히 흰색이 끝나는 좌상단 모서리에서 배경이 비쳐 보였다) border-box로 맞춰 끝까지 칠한다.
+    backgroundClip: 'border-box' as const,
+    backgroundOrigin: 'border-box' as const,
   };
 
   return (
     <div
-      className="relative grow border-transparent rounded-md border-b-8 border-b-black shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
+      className="relative grow rounded-lg border border-border shadow-sm overflow-hidden"
       style={containerStyle}
     >
       <Interactive
@@ -450,7 +455,7 @@ const HueBase = ({ className, hue, onChange }: HueProps) => {
 
   return (
     <div
-      className={`relative h-3 mt-1 rounded-full ${className || ''}`}
+      className={`relative h-3.5 mt-2.5 rounded-full shadow-sm ${className || ''}`}
       style={{
         background: 'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)'
       }}
@@ -532,7 +537,7 @@ export const RgbColorPicker = ({
   const [hsva, updateHsva] = useColorManipulation(color, onChange);
 
   return (
-    <div {...rest} className={`relative flex flex-col w-55 h-26 select-none cursor-default overflow-hidden ${className || ''}`}>
+    <div {...rest} className={`relative flex flex-col w-full select-none cursor-default overflow-hidden ${className || 'max-w-55 h-26'}`}>
       <Saturation hsva={hsva} onChange={updateHsva} />
       <Hue hue={hsva.h} onChange={updateHsva} />
     </div>

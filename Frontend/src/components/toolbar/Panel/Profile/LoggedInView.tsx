@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Titlebox } from "../../../common/Titlebox";
 import { Button } from "../../../common/Button";
 import { useAuth } from "../../../../contexts/Auth.context";
+import { PanelSection } from "../../../common/PanelKit";
 
 export const LoggedInView = () => {
   const { username, email, accessToken, setAccessToken, setUsername, setEmail } = useAuth();
@@ -19,7 +20,7 @@ export const LoggedInView = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy token:", err);
+      console.error("토큰 복사에 실패했습니다:", err);
     }
   };
 
@@ -29,44 +30,39 @@ export const LoggedInView = () => {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* 프로필 정보 섹션 */}
-      <div className="flex flex-col gap-2">
-        {/* 사용자명 */}
-        <Titlebox title="USERNAME">
-          <span className="text-sm font-medium text-slate-800">{username}</span>
-        </Titlebox>
+    <div className="flex flex-col gap-3 h-full min-h-0">
+      <PanelSection>
+        <div className="flex flex-col gap-2">
+          <Titlebox title="USERNAME">
+            <span className="text-sm font-medium text-content">{username}</span>
+          </Titlebox>
 
-        {/* 이메일 */}
-        <Titlebox title="EMAIL">
-          <span className="text-sm text-slate-600 truncate">{email}</span>
-        </Titlebox>
+          <Titlebox title="EMAIL">
+            <span className="text-sm text-content-muted truncate">{email}</span>
+          </Titlebox>
 
-        {/* 토큰 */}
-        <Titlebox title="ACCESS TOKEN">
-          <div className="flex items-center justify-between gap-2 w-full">
-            <span className="text-xs font-mono text-slate-500 truncate">
-              {getMaskedToken(accessToken)}
-            </span>
-            <button
-              onClick={handleCopyToken}
-              className="px-2.5 py-1 text-xs font-medium rounded-md transition-colors shrink-0"
-              style={{
-                backgroundColor: copied ? '#06b6d4' : '#e2e8f0',
-                color: copied ? 'white' : '#64748b'
-              }}
-            >
-              {copied ? '✓' : '복사'}
-            </button>
-            <Button display={copied ? '✓' : 'Copy'} hint="토큰을 클립보드에 복사합니다." />
-          </div>
-        </Titlebox>
-      </div>
+          <Titlebox title="ACCESS TOKEN">
+            <div className="flex items-center justify-between gap-2 w-full">
+              <span className="text-xs font-mono text-content-subtle truncate">
+                {getMaskedToken(accessToken)}
+              </span>
+              <Button
+                display={copied ? '✓' : '복사'}
+                variant="subtle"
+                className="text-xs shrink-0"
+                hint="토큰을 클립보드에 복사합니다."
+                callback={handleCopyToken}
+              />
+            </div>
+          </Titlebox>
+        </div>
+      </PanelSection>
 
-      {/* 로그아웃 버튼 */}
+      {/* 로그아웃은 위험 동작이 아니므로 액센트와 구분되는 중립 톤 사용 */}
       <button
+        type="button"
         onClick={handleLogout}
-        className="w-full py-2.5 px-4 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 active:bg-cyan-700 transition-colors shadow-sm hover:shadow-md"
+        className="focus-ring mt-auto w-full py-2.5 px-4 bg-surface-hover text-content text-sm font-medium rounded-lg border border-border hover:bg-surface-raised active:bg-border-strong transition-colors shadow-sm cursor-pointer"
       >
         로그아웃
       </button>
