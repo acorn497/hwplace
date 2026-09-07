@@ -31,7 +31,7 @@ export const LoginForm = ({ setActive }: { setActive: (parameter: string) => voi
   const [isLoading, setIsLoading] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  const { setEmail, setUsername, setAccessToken } = useAuth();
+  const { setEmail, setUsername, setAccessToken, setRole, setRestricted } = useAuth();
   const { setNotification } = useNotification();
 
   // Phase 전환 시 자동 포커스
@@ -67,6 +67,8 @@ export const LoginForm = ({ setActive }: { setActive: (parameter: string) => voi
     setEmail(result.data.email);
     setUsername(result.data.username);
     setAccessToken(result.data.accessToken);
+    setRole(result.data.role === 'ADMIN' ? 'ADMIN' : 'USER');
+    setRestricted(Boolean(result.data.restricted));
 
     setNotification({ title: '로그인', content: '로그인이 완료되었습니다.' });
 

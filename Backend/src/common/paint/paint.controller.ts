@@ -4,6 +4,7 @@ import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '../auth/guard/jwt.guard';
+import { RestrictedGuard } from '../auth/guard/restricted.guard';
 import { JobType, JobWithUserType } from './job.interface';
 import { GlobalResponse } from '../global/global-response.dto';
 import { ISC } from '../global/ISC';
@@ -20,7 +21,9 @@ export class PaintController {
     this.BATCH_SIZE = parseInt(this.configService.get('WORKER_BATCH_SIZE') ?? '500')
   };
 
-  @UseGuards(AuthGuard)
+  // 제재된 계정은 큐에 적재되기 전에 여기서 막힌다.
+  // 워커까지 들어가면 이미 DB에 쓰인 뒤라 되돌릴 것이 늘어난다.
+  @UseGuards(AuthGuard, RestrictedGuard)
   @Post()
   async paintPixel(@Body(new ParseArrayPipe({ items: PaintPixelDTO })) body: PaintPixelDTO[], @Request() request) {
     const userIdx = request.user.index

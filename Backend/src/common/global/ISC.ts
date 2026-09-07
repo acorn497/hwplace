@@ -7,6 +7,7 @@
  * D: 
  * E: VALIDATION
  * F: SERVER
+ * G: ADMIN
  */
 
 // Internal Status Code
@@ -20,6 +21,12 @@ export const ISC = {
 
     /** 토큰은 유효하지만 그 유저가 더 이상 존재하지 않는다 (탈퇴/DB 초기화) */
     USER_NOT_FOUND: 'A120',
+
+    /** 제재된 계정이라 쓰기 동작이 거부되었다 */
+    RESTRICTED: 'A130',
+
+    /** 관리자 권한이 필요한 요청을 일반 유저가 보냈다 */
+    FORBIDDEN: 'A140',
   },
 
   VALIDATION: {
@@ -41,5 +48,16 @@ export const ISC = {
   PIXEL: {
     FOUND_DATA: 'C100',
     NO_DATA: 'C101',
-  }
+  },
+
+  ADMIN: {
+    /** 대상 유저를 찾을 수 없다 */
+    TARGET_NOT_FOUND: 'G100',
+
+    /** 자기 자신에게는 할 수 없는 동작이다 (자기 제재/강등 등) */
+    SELF_TARGET: 'G110',
+
+    /** 요청한 좌표 범위가 캔버스를 벗어났거나 뒤집혀 있다 */
+    INVALID_AREA: 'G120',
+  },
 } 

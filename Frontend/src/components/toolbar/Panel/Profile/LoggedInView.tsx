@@ -5,13 +5,15 @@ import { useAuth } from "../../../../contexts/Auth.context";
 import { PanelSection } from "../../../common/PanelKit";
 
 export const LoggedInView = () => {
-  const { username, email, accessToken, setAccessToken, setUsername, setEmail } = useAuth();
+  const { username, email, accessToken, role, restricted, setAccessToken, setUsername, setEmail, setRole, setRestricted } = useAuth();
   const [copied, setCopied] = useState(false);
 
   const handleLogout = () => {
     setAccessToken("");
     setUsername("");
     setEmail("");
+    setRole("USER");
+    setRestricted(false);
   };
 
   const handleCopyToken = async () => {
@@ -34,7 +36,20 @@ export const LoggedInView = () => {
       <PanelSection>
         <div className="flex flex-col gap-2">
           <Titlebox title="USERNAME">
-            <span className="text-sm font-medium text-content">{username}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-medium text-content">{username}</span>
+              {role === 'ADMIN' ?
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-accent text-accent-fg">
+                  ADMIN
+                </span>
+                : null}
+              {/* 제재 상태는 왜 색칠이 안 되는지 알 수 있도록 프로필에 드러낸다 */}
+              {restricted ?
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-danger text-app-bg">
+                  제재됨
+                </span>
+                : null}
+            </div>
           </Titlebox>
 
           <Titlebox title="EMAIL">

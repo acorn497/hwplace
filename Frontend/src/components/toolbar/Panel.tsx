@@ -6,6 +6,7 @@ import { Brush } from "./Panel/Brush";
 import { Profile } from "./Panel/Profile";
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { Setting } from "./Panel/Setting";
+import { Admin } from "./Panel/Admin";
 import { Feedback } from "./Notification";
 
 // 다음 패널이 이전 패널 기준 어느 쪽에서 들어오는지를 나타내는 슬라이드 방향
@@ -23,6 +24,8 @@ const PanelMap: (ReactNode | null)[] = [
   <Setting />,
   <Profile />,
   <Service />,
+  // 관리자 전용. 툴바가 아이콘을 숨기고, 패널 자체도 권한을 한 번 더 확인한다.
+  <Admin />,
 ];
 
 export const Panel = () => {

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { BookA, Brush, IdCard, MessagesSquare, Settings, SquareMousePointer } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BookA, Brush, IdCard, MessagesSquare, Settings, Shield, SquareMousePointer } from "lucide-react"
 
 import { Tool } from "../../contexts/enums/Tool.enum"
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { useChat } from "../../contexts/Chat.context";
+import { useAuth } from "../../contexts/Auth.context";
 
 // 툴바 호버 툴팁이 나타나기까지의 지연 시간 (ms) - Button 컴포넌트와 동일하게 맞춤
 const TOOLTIP_TTL = 500;
@@ -15,11 +16,23 @@ const ToolMap = [
   { tool: Tool.SETTING, icon: <Settings />, label: "설정" },
   { tool: Tool.PROFILE, icon: <IdCard />, label: "프로필" },
   { tool: Tool.SERVICE, icon: <BookA />, label: "서비스 정보" },
+  // 관리자에게만 보인다. 목록 맨 뒤에 두어 일반 유저의 단축키 번호가 바뀌지 않게 한다.
+  { tool: Tool.ADMIN, icon: <Shield />, label: "관리자", adminOnly: true },
 ];
 
 export const Toolbar = () => {
   const { activeTool, setActiveTool } = useGlobalVariable();
   const { unreadCount } = useChat();
+  const { isAdmin } = useAuth();
+
+  // 관리자가 아니면 관리자 버튼을 아예 그리지 않는다.
+  // 단축키 번호는 이 목록의 순서를 따르므로, 관리자 항목이 맨 뒤에 있는 한
+  // 일반 유저와 관리자의 1~6번 단축키는 동일하게 유지된다.
+  // useMemo가 없으면 매 렌더마다 새 배열이 되어 아래 키다운 리스너가 계속 재등록된다.
+  const visibleTools = useMemo(
+    () => ToolMap.filter((tool) => !tool.adminOnly || isAdmin),
+    [isAdmin],
+  );
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const tooltipTimerRef = useRef<number | null>(null);
 
@@ -34,18 +47,18 @@ export const Toolbar = () => {
       if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey)
         return;
 
-      const index = ToolMap.findIndex((_, i) => String(i + 1) === event.key);
+      const index = visibleTools.findIndex((_, i) => String(i + 1) === event.key);
       if (index === -1) return;
 
       event.preventDefault();
-      setActiveTool(ToolMap[index].tool);
+      setActiveTool(visibleTools[index].tool);
     };
 
     document.addEventListener("keydown", handleKeydown);
     return () => {
       document.removeEventListener("keydown", handleKeydown);
     }
-  }, [setActiveTool]);
+  }, [setActiveTool, visibleTools]);
 
   const clearTooltipTimer = () => {
     if (tooltipTimerRef.current !== null) {
@@ -69,7 +82,7 @@ export const Toolbar = () => {
   return (
     <div className="fixed flex flex-col items-center bottom-10 left-1/2 -translate-x-1/2">
       <div className="relative flex items-center gap-2 bg-surface backdrop-blur-md px-2 py-1.5 rounded-2xl border border-border shadow-sm shadow-black/5 mt-4">
-        {ToolMap.map((tool, index) => {
+        {visibleTools.map((tool, index) => {
           const isActive = activeTool === tool.tool;
           return (
             <div key={index} className="relative" onMouseEnter={() => handleMouseEnter(index)} onMouseLeave={handleMouseLeave}>
