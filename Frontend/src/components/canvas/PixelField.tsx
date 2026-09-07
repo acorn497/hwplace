@@ -5,14 +5,23 @@ import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { useKeyboardShortcut } from "../../hooks/useKeyboardShortcut";
 import { Tool } from "../../contexts/enums/Tool.enum";
 import { DragMode } from "../../contexts/enums/DragMode.enum";
-import { FetchMethod, useFetch } from "../../hooks/useFetch";
+import { apiFetch, FetchMethod } from "../../hooks/useFetch";
+import { GRID_MIN_ZOOM } from "../../contexts/enums/Canvas.const";
 
 /** 키보드 줌 배율 스텝 (연속 줌) */
 const ZOOM_FACTOR = 1.25;
 /** 휠 줌 배율 스텝 */
 const WHEEL_ZOOM_FACTOR = 1.1;
+
+/**
+ * 휠 한 칸의 기준 delta 값.
+ * 마우스 휠은 보통 100 안팎, 트랙패드는 훨씬 작은 값이 잘게 들어오므로
+ * 이 값으로 나눠 스와이프 세기에 비례한 줌이 되게 한다.
+ */
+const WHEEL_DELTA_UNIT = 100;
 /** 화면에 맞출 때 뷰포트 대비 여유 비율 */
 const FIT_MARGIN = 0.92;
+
 
 export const PixelField = () => {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -36,7 +45,7 @@ export const PixelField = () => {
     isPaintBucketActive,
     notifyCanvasClick,
   } = useCanvas();
-  const { activeTool } = useGlobalVariable();
+  const { activeTool, showGrid } = useGlobalVariable();
 
   const isCanvasReady = canvasSizeX > 0 && canvasSizeY > 0;
 
@@ -185,7 +194,7 @@ export const PixelField = () => {
     const pos = cursorPositionRef.current;
 
     if (activeToolRef.current !== Tool.BRUSH) {
-      const result = await useFetch(FetchMethod.GET, `/canvas/pixel?x=${pos.x}&y=${pos.y}`);
+      const result = await apiFetch(FetchMethod.GET, `/canvas/pixel?x=${pos.x}&y=${pos.y}`);
 
       switch (result.internalStatusCode) {
         case 'C100': // FOUND_DATA
@@ -486,7 +495,13 @@ export const PixelField = () => {
         return;
       }
 
+      /*
+        픽셀 클릭은 캔버스 위에서 눌렀을 때만 처리한다.
+        (mousedown을 뷰포트에 걸었으므로, 캔버스 바깥 여백을 누른 것까지
+         직전 커서 좌표의 픽셀 클릭으로 오인하면 안 된다)
+      */
       if (event.button === 0 && !spaceDownRef.current) {
+        if (!canvas.contains(event.target as Node)) return;
         void handleMouseClick();
       }
     };
@@ -498,14 +513,6 @@ export const PixelField = () => {
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
 
-      // Alt + 휠: 커서 기준 줌
-      if (event.altKey) {
-        const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
-        const factor = delta < 0 ? WHEEL_ZOOM_FACTOR : 1 / WHEEL_ZOOM_FACTOR;
-        applyZoomAtClientPoint(zoomRef.current * factor, event.clientX, event.clientY);
-        return;
-      }
-
       const viewport = viewportRef.current;
       if (!viewport) return;
 
@@ -515,24 +522,48 @@ export const PixelField = () => {
         return;
       }
 
-      // 기본 휠: 위/아래 이동 (트랙패드 가로 스와이프는 deltaX)
-      viewport.scrollTop += event.deltaY;
-      viewport.scrollLeft += event.deltaX;
+      // Ctrl + 휠: 위/아래 이동 (줌이 기본이 되었으므로 스크롤은 이쪽으로 옮겼다)
+      if (event.ctrlKey || event.metaKey) {
+        viewport.scrollTop += event.deltaY;
+        viewport.scrollLeft += event.deltaX;
+        return;
+      }
+
+      /*
+        기본 휠: 커서 위치를 기준으로 확대/축소.
+        그림 그리는 캔버스에서는 스크롤보다 줌이 훨씬 자주 쓰인다.
+
+        트랙패드는 한 번의 스와이프가 작은 delta로 잘게 쪼개져 오므로,
+        고정 배율을 곱하면 너무 빨리 확대된다. delta 크기에 비례시키되 상한을 둔다.
+      */
+      const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+      if (delta === 0) return;
+
+      const step = Math.min(Math.abs(delta) / WHEEL_DELTA_UNIT, 1);
+      const factor = delta < 0
+        ? 1 + (WHEEL_ZOOM_FACTOR - 1) * step
+        : 1 / (1 + (WHEEL_ZOOM_FACTOR - 1) * step);
+
+      applyZoomAtClientPoint(zoomRef.current * factor, event.clientX, event.clientY);
     };
 
-    canvas.addEventListener('mousedown', handleMouseDown);
+    /*
+      팬(휠 클릭 드래그)은 캔버스 바깥 여백에서 눌러도 시작돼야 하므로 뷰포트에 건다.
+      단 픽셀 클릭 판정은 캔버스 위에서만 일어나야 하니, 그 분기는 handleMouseDown 안에서 나눈다.
+    */
+    viewport.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     viewport.addEventListener('wheel', handleWheel, { passive: false });
-    canvas.addEventListener('auxclick', handleAuxClick);
-    // 가운데 버튼 기본 오토스크롤 방지
-    canvas.addEventListener('mousedown', handleAuxClick);
+    viewport.addEventListener('auxclick', handleAuxClick);
+    // 가운데 버튼 기본 오토스크롤(십자 커서) 방지
+    viewport.addEventListener('mousedown', handleAuxClick);
 
     return () => {
-      canvas.removeEventListener('mousedown', handleMouseDown);
+      viewport.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
       viewport.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('auxclick', handleAuxClick);
-      canvas.removeEventListener('mousedown', handleAuxClick);
+      viewport.removeEventListener('auxclick', handleAuxClick);
+      viewport.removeEventListener('mousedown', handleAuxClick);
     };
   }, [isCanvasReady, applyZoomAtClientPoint, setCursorPosition, setIsPanning, clientToCanvasPixel, handleMouseClick]);
 
@@ -578,6 +609,23 @@ export const PixelField = () => {
               height={canvasSizeY}
               style={{ width: '100%', height: '100%' }}
             />
+            {/*
+              픽셀 그리드.
+              캔버스에 직접 그리면 확대할 때마다 다시 그려야 하므로 CSS 그라디언트로 얹는다.
+              (배경 크기를 zoom에 맞추면 브라우저가 알아서 스케일하므로 재렌더가 없다)
+              한 칸이 너무 작으면 선이 뭉쳐 화면이 회색으로 보이므로 일정 배율 이상에서만 표시한다.
+            */}
+            {showGrid && zoom >= GRID_MIN_ZOOM ? (
+              <div
+                className="absolute top-0 left-0 w-full h-full pointer-events-none z-5"
+                style={{
+                  backgroundImage:
+                    `repeating-linear-gradient(to right, var(--hw-grid-line) 0 1px, transparent 1px ${zoom}px),` +
+                    `repeating-linear-gradient(to bottom, var(--hw-grid-line) 0 1px, transparent 1px ${zoom}px)`,
+                }}
+              />
+            ) : null}
+
             <div
               className="absolute z-10 pointer-events-none top-0 left-0 box-border border border-content"
               style={{

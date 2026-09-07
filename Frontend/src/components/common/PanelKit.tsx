@@ -27,7 +27,14 @@ export const PanelShell = ({
         <h2 className="text-sm font-semibold text-content">{title}</h2>
         {actions ? <div className="flex items-center gap-1.5 shrink-0">{actions}</div> : null}
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/*
+        내용이 넘치면 스크롤되게 하되, 좌우로는 자르지 않는다.
+        focus-ring이 outline-offset으로 요소 '바깥'에 그려지기 때문에
+        overflow-y-auto만 걸면 가장자리 입력창의 포커스 링과 그림자가 잘려 보인다.
+        (overflow-y를 지정하면 overflow-x는 자동으로 auto가 되므로 x를 명시적으로 visible로 둘 수 없어,
+         대신 안쪽 여백을 줘서 링이 그려질 자리를 확보한다)
+      */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-1 -mx-1">
         {children}
       </div>
     </div>

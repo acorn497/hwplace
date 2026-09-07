@@ -44,7 +44,12 @@ axiosInstance.interceptors.response.use(
   },
 )
 
-export const useFetch = async (method: FetchMethod, uri: string, data?: any): Promise<ServerResponse> => {
+/**
+ * 이름은 useFetch지만 훅이 아니라 그냥 async 함수다.
+ * (호출 순서 제약이 없고 반복문/조건문 안에서도 쓸 수 있다)
+ * 훅 규칙 린트에 걸리지 않게 반복문 등에서 쓸 때는 아래 apiFetch 별칭을 쓴다.
+ */
+export const useFetch = async (method: FetchMethod, uri: string, data?: unknown): Promise<ServerResponse> => {
   try {
     switch (method) {
       case FetchMethod.GET:
@@ -61,3 +66,5 @@ export const useFetch = async (method: FetchMethod, uri: string, data?: any): Pr
     else throw error;
   }
 }
+/** useFetch와 동일한 함수. 훅이 아님을 이름으로 드러내 반복문 안에서도 안전하게 쓴다. */
+export const apiFetch = useFetch;

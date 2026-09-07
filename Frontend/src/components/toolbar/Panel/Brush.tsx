@@ -7,7 +7,7 @@ import { PanelShell, LoginGate, SegmentedControl } from "../../common/PanelKit";
 import { useCanvas } from "../../../contexts/Canvas.context";
 import { DragMode } from "../../../contexts/enums/DragMode.enum";
 import { usePixel } from "../../../contexts/Pixel.context";
-import { FetchMethod, useFetch } from "../../../hooks/useFetch";
+import { apiFetch, FetchMethod } from "../../../hooks/useFetch";
 import { useAuth } from "../../../contexts/Auth.context";
 import { useKeyboardShortcut } from "../../../hooks/useKeyboardShortcut";
 import { useNotification } from "../../../contexts/Notification.context";
@@ -20,6 +20,13 @@ type RgbChannel = "r" | "g" | "b";
 
 // 주변 픽셀 선택(페인트 버킷) 최대 개수 -- src/utils/bfs.ts 와 동일한 기준을 사용
 const BFS_LIMIT = Number(import.meta.env.VITE_BFS_SIZE ?? 500);
+
+/**
+ * 한 번의 요청에 담을 최대 픽셀 수.
+ * 서버 워커의 배치 크기(WORKER_BATCH_SIZE, 기본 500)와 맞춰두면
+ * 요청 하나가 큐 작업 하나로 깔끔하게 떨어진다.
+ */
+const PAINT_CHUNK_SIZE = Number(import.meta.env.VITE_PAINT_CHUNK_SIZE) || 500;
 
 // 최근 사용한 색상 저장 개수 / localStorage 키
 const RECENT_COLOR_LIMIT = 8;
@@ -87,6 +94,8 @@ export const Brush = () => {
 
   // 칠하기 요청 진행 중 여부 -- 중복 제출 방지
   const [isPaintPending, setIsPaintPending] = useState(false);
+  /** 나눠 보내는 중일 때의 진행 상황 (버튼에 표시) */
+  const [paintProgress, setPaintProgress] = useState<{ done: number; total: number } | null>(null);
 
   const [recentColors, setRecentColors] = useState<RgbColor[]>(() => {
     try {
@@ -191,6 +200,7 @@ export const Brush = () => {
     if (selectedPixels.length === 0 || isPaintPending) return;
 
     setIsPaintPending(true);
+    setPaintProgress({ done: 0, total: selectedPixels.length });
 
     const paintRequest = selectedPixels.map(pixel => ({
       posX: pixel.x,
@@ -200,26 +210,67 @@ export const Brush = () => {
       colorB: currentColor.b
     }));
 
-    try {
-      const result = await useFetch(FetchMethod.POST, '/paint', paintRequest);
-      const status = result.internalStatusCode?.toString();
+    /*
+      선택 픽셀이 많으면 한 번의 POST에 다 담지 않고 나눠 보낸다.
+      한 덩어리로 보내면 본문이 커져 검증(ParseArrayPipe)이 오래 걸리고,
+      중간에 실패하면 전부 실패로 되돌아간다. 나눠 보내면 성공한 만큼은 남는다.
+      순서대로 보내 서버 큐가 한꺼번에 몰리지 않게 한다.
+    */
+    const chunks: typeof paintRequest[] = [];
+    for (let i = 0; i < paintRequest.length; i += PAINT_CHUNK_SIZE) {
+      chunks.push(paintRequest.slice(i, i + PAINT_CHUNK_SIZE));
+    }
 
-      if (!status?.match('0000')) {
+    let sent = 0;
+    /** 실패한 픽셀은 선택 상태로 남겨 다시 시도할 수 있게 한다 */
+    let failedFrom = -1;
+    let failMessage = '';
+
+    try {
+      for (let index = 0; index < chunks.length; index++) {
+        const chunk = chunks[index];
+        const result = await apiFetch(FetchMethod.POST, '/paint', chunk);
+        const status = result.internalStatusCode?.toString();
+
+        if (!status?.match('0000')) {
+          failedFrom = sent;
+          failMessage = result.message || '칠하기에 실패했습니다. 잠시 후 다시 시도해주세요.';
+          break;
+        }
+
+        sent += chunk.length;
+        setPaintProgress({ done: sent, total: paintRequest.length });
+      }
+
+      if (failedFrom >= 0) {
+        // 보낸 데까지는 반영됐으므로, 남은 픽셀만 선택 상태로 되돌린다
+        setSelectedPixels(prev => prev.slice(failedFrom));
         setNotification({
           title: '칠하기',
-          content: result.message || '칠하기에 실패했습니다. 잠시 후 다시 시도해주세요.',
-          type: Type.WARNING
+          content: sent > 0
+            ? `${sent.toLocaleString()}개까지 칠했습니다. 나머지는 다시 시도해주세요. (${failMessage})`
+            : failMessage,
+          type: Type.WARNING,
         });
         return;
       }
 
-      setNotification({ title: '칠하기', content: `${paintRequest.length}개의 픽셀을 칠했습니다.` });
+      setNotification({ title: '칠하기', content: `${sent.toLocaleString()}개의 픽셀을 칠했습니다.` });
       pushRecentColor(currentColor);
       setSelectedPixels([]);
     } catch {
-      setNotification({ title: '칠하기', content: '서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', type: Type.ERROR });
+      // 통신 자체가 끊긴 경우에도 이미 보낸 만큼은 반영돼 있다
+      if (sent > 0) setSelectedPixels(prev => prev.slice(sent));
+      setNotification({
+        title: '칠하기',
+        content: sent > 0
+          ? `${sent.toLocaleString()}개까지 칠한 뒤 통신이 끊겼습니다. 나머지는 다시 시도해주세요.`
+          : '서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        type: Type.ERROR,
+      });
     } finally {
       setIsPaintPending(false);
+      setPaintProgress(null);
     }
   };
 
@@ -432,7 +483,13 @@ export const Brush = () => {
 
             {/* 주요 동작 */}
             <Button
-              display={isPaintPending ? '칠하는 중...' : hasSelection ? `${selectedPixels.length}개 칠하기` : '칠하기'}
+              display={
+                paintProgress
+                  // 나눠 보내는 중에는 어디까지 갔는지 보여준다 (큰 선택은 몇 초 걸릴 수 있다)
+                  ? `${Math.round((paintProgress.done / paintProgress.total) * 100)}% 칠하는 중...`
+                  : isPaintPending ? '칠하는 중...'
+                    : hasSelection ? `${selectedPixels.length.toLocaleString()}개 칠하기` : '칠하기'
+              }
               hint="선택된 픽셀을 칠합니다."
               keybind="Enter"
               callback={handlePaintPixels}

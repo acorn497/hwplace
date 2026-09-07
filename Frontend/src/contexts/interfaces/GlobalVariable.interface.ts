@@ -19,6 +19,10 @@ export interface GlobalVariableContextType {
   version: string;
   setVersion: (version: string) => void;
 
+  /** 캔버스에 픽셀 경계선(그리드)을 표시할지 */
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+
   panelPosition: PanelPosition;
   setPanelPosition: (position: PanelPosition) => void;
 }

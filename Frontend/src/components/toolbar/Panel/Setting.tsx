@@ -5,6 +5,7 @@ import { useGlobalVariable } from "../../../contexts/GlobalVariable.context"
 import { useTheme } from "../../../contexts/Theme.context";
 import { Theme, ResolvedTheme } from "../../../contexts/enums/Theme.enum";
 import { PanelShell, PanelSection, SettingRow, Toggle, SegmentedControl } from "../../common/PanelKit";
+import { GRID_MIN_ZOOM } from "../../../contexts/enums/Canvas.const";
 import { REMEMBER_LOGIN_EMAIL_STORAGE_KEY, SAVED_LOGIN_EMAIL_STORAGE_KEY } from "./Profile/LoginForm";
 
 // App.tsx에서도 최초 마운트 시 이 값을 읽어 <html>에 반영하므로 export 해서 공유한다.
@@ -26,7 +27,7 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: ReactNode }[] = [
 ];
 
 export const Setting = () => {
-  const { panelPosition, setPanelPosition } = useGlobalVariable();
+  const { panelPosition, setPanelPosition, showGrid, setShowGrid } = useGlobalVariable();
   const { theme, resolvedTheme, setTheme } = useTheme();
 
   const [reduceMotion, setReduceMotion] = useState<boolean>(
@@ -96,6 +97,22 @@ export const Setting = () => {
                 />
               ))}
             </div>
+          </PanelSection>
+
+          {/* 픽셀 그리드 */}
+          <PanelSection>
+            <SettingRow
+              label="픽셀 그리드"
+              description={`${GRID_MIN_ZOOM}배 이상 확대했을 때 픽셀 경계선을 표시합니다.`}
+              htmlFor="show-grid"
+            >
+              <Toggle
+                id="show-grid"
+                checked={showGrid}
+                onChange={setShowGrid}
+                label="픽셀 그리드"
+              />
+            </SettingRow>
           </PanelSection>
 
           {/* 애니메이션 줄이기 */}

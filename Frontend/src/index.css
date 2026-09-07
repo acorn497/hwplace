@@ -89,6 +89,9 @@
   --hw-danger-surface: rgb(254 226 226 / 0.85);
 
   --hw-canvas-void: #e2e8f0;
+
+  /* 픽셀 그리드 선. 그림 위에 얹히므로 아주 옅게 */
+  --hw-grid-line: rgb(15 23 42 / 0.16);
 }
 
 /* ---------- 다크 ---------- */
@@ -120,6 +123,8 @@ html[data-theme="dark"] {
   --hw-danger-surface: rgb(127 29 29 / 0.55);
 
   --hw-canvas-void: #0f172a;
+
+  --hw-grid-line: rgb(226 232 240 / 0.18);
 }
 
 html {

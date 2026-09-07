@@ -19,10 +19,16 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
     return (saved as PanelPosition) ?? PanelPosition.BC;
   });
 
+  // 픽셀 경계선 표시 여부. 확대해서 도트를 찍을 때 칸을 세기 쉬워진다.
+  const [showGrid, setShowGrid] = useState<boolean>(() => localStorage.getItem('showGrid') === 'true');
 
   useEffect(() => {
     localStorage.setItem('panelPosition', panelPosition);
   }, [panelPosition])
+
+  useEffect(() => {
+    localStorage.setItem('showGrid', String(showGrid));
+  }, [showGrid])
 
   useEffect(() => {
     const startTime = Date.now();
@@ -57,6 +63,7 @@ export const GlobalVariableProvider = ({ children }: PropsWithChildren) => {
     totalBatchedPixelCount, setTotalBatchedPixelCount,
     version, setVersion,
     panelPosition, setPanelPosition,
+    showGrid, setShowGrid,
   };
 
   return (
