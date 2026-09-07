@@ -30,6 +30,8 @@ const clearStaleSession = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('username');
   localStorage.removeItem('email');
+  localStorage.removeItem('role');
+  localStorage.removeItem('restricted');
   // 다른 탭과 컨텍스트가 로그아웃 상태를 따라오도록 알린다
   window.dispatchEvent(new CustomEvent('auth:session-expired'));
 };

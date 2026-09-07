@@ -81,10 +81,14 @@ export class AuthService {
     const token = await this.jwtService.signAsync(payload);
 
     response.message = '로그인이 완료되었습니다.'
+    // 권한/제재 여부는 UI 표시에만 쓴다. 실제 접근 제어는 매 요청 서버 가드가 DB를 보고 판단하므로
+    // 클라이언트가 이 값을 조작해도 관리 기능은 열리지 않는다.
     response.data = {
       email: exist.USER_EMAIL,
       username: exist.USER_DISPLAY,
       accessToken: token,
+      role: exist.USER_ROLE,
+      restricted: exist.USER_RESTRICTED,
     };
     response.internalStatusCode = ISC.SUCCESS;
 

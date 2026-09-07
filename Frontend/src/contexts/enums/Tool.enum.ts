@@ -5,9 +5,13 @@
  * 
  * CHAT = 2
  * 
- * PROFILE = 3
+ * SETTING = 3
  * 
- * SERVICE = 4
+ * PROFILE = 4
+ * 
+ * SERVICE = 5
+ * 
+ * ADMIN = 6 (관리자에게만 툴바에 노출된다)
  */
 export enum Tool {
   NONE = 0,
@@ -16,4 +20,5 @@ export enum Tool {
   SETTING = 3,
   PROFILE = 4,
   SERVICE = 5,
+  ADMIN = 6,
 }

@@ -12,6 +12,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CanvasModule } from './common/canvas/canvas.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ReplayModule } from './common/replay/replay.module';
+import { AdminModule } from './common/admin/admin.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ReplayModule } from './common/replay/replay.module';
     }),
     CanvasModule,
     ReplayModule,
+    AdminModule,
   ],
   controllers: [
     AppController,

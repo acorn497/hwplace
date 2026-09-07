@@ -47,7 +47,7 @@ export class AuthGuard implements CanActivate {
       ? null
       : await this.prisma.user.findUnique({
         where: { USER_INDEX: index },
-        select: { USER_INDEX: true },
+        select: { USER_INDEX: true, USER_ROLE: true, USER_RESTRICTED: true },
       });
 
     if (!exist) {
@@ -57,6 +57,12 @@ export class AuthGuard implements CanActivate {
       };
       throw new UnauthorizedException(response);
     }
+
+    // 권한과 제재 여부는 토큰이 아니라 DB가 단일 출처다.
+    // 토큰에 담아두면 제재/강등이 토큰 만료 전까지 반영되지 않으므로,
+    // 이미 조회한 김에 최신 값을 요청에 실어 뒤쪽 가드/컨트롤러가 쓰게 한다.
+    request['user'].role = exist.USER_ROLE;
+    request['user'].restricted = exist.USER_RESTRICTED;
 
     return true;
   }

@@ -71,6 +71,12 @@ model snapshot_versions {
   @@index([completed, created_at])
 }
 
+/// 계정 권한. ADMIN 만 /admin 아래의 관리 기능에 접근할 수 있다.
+enum Role {
+  USER
+  ADMIN
+}
+
 model user {
   USER_INDEX      Int      @id @default(autoincrement())
   USER_DISPLAY    String   @db.VarChar(16)
@@ -78,7 +84,29 @@ model user {
   USER_PASSWORD   String   @db.VarChar(255)
   USER_RESTRICTED Boolean  @default(false)
   USER_PAINTED    Int      @default(0)
+  USER_ROLE       Role     @default(USER)
 
   pixels          pixel[]
   canvas_events   canvas_events[]
+  admin_logs      admin_log[]
+}
+
+/// 관리자가 수행한 행위의 감사 로그.
+/// 제재/캔버스 초기화처럼 되돌리기 어려운 동작은 누가 언제 왜 했는지 남겨야 한다.
+model admin_log {
+  log_idx      Int       @id @default(autoincrement())
+  /// 관리자 계정이 지워져도 로그는 남아야 하므로 nullable + SetNull 이다.
+  admin_id     Int?
+  /// AdminAction enum 값 (BAN, UNBAN, CLEAR_AREA, ROLLBACK_USER ...)
+  action       String    @db.VarChar(32)
+  /// 대상 유저 인덱스 (유저 대상 동작일 때만)
+  target_user  Int?
+  /// 동작별 상세 정보 (좌표 범위, 영향 픽셀 수, 사유 등)
+  detail       Json?
+  created_at   DateTime  @default(now())
+
+  admin        user?     @relation(fields: [admin_id], references: [USER_INDEX], onDelete: SetNull)
+
+  @@index([created_at])
+  @@index([admin_id])
 }
