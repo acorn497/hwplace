@@ -31,6 +31,15 @@ export interface CanvasContextType {
   isPaintBucketActive: boolean;
   setIsPaintBucketActive: (isDown: boolean) => void;
 
+  /**
+   * 캔버스를 실제로 클릭한 순간을 알리는 신호.
+   * 스포이드/페인트통처럼 "무장 후 캔버스 클릭"으로 동작하는 도구는 전역 mousedown이 아니라
+   * 이 신호를 봐야 한다. (툴바 버튼을 누르는 클릭까지 삼켜 오발동하던 문제를 막는다)
+   * seq는 같은 칸을 연속으로 클릭해도 값이 달라지도록 하는 단조 증가 카운터다.
+   */
+  canvasClick: { x: number; y: number; seq: number } | null;
+  notifyCanvasClick: (position: PixelPositionContextType) => void;
+
   /** 연속 줌 모델의 최소/최대 배율. 줌 관련 UI/로직은 항상 이 범위로 clamp 해야 한다. */
   minZoom: number;
   maxZoom: number;

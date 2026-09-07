@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type PropsWithChildren } from "react";
+import { createContext, useCallback, useContext, useRef, useState, type PropsWithChildren } from "react";
 import { CanvasStatus } from "./enums/CanvasStatus.enum";
 import { DragMode } from "./enums/DragMode.enum";
 import { CanvasContextType } from "./interfaces/Canvas.interface";
@@ -28,6 +28,13 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
   const [isCloneColorActive, setIsCloneColorActive] = useState(false);
   const [isPaintBucketActive, setIsPaintBucketActive] = useState(false);
 
+  // 캔버스 클릭 신호 (스포이드/페인트통이 구독한다)
+  const [canvasClick, setCanvasClick] = useState<{ x: number; y: number; seq: number } | null>(null);
+  const canvasClickSeq = useRef(0);
+  const notifyCanvasClick = useCallback((position: { x: number; y: number }) => {
+    setCanvasClick({ x: position.x, y: position.y, seq: ++canvasClickSeq.current });
+  }, []);
+
   const [isPanning, setIsPanning] = useState(false);
   const [fitToScreenSignal, setFitToScreenSignal] = useState(0);
   const requestFitToScreen = useCallback(() => {
@@ -45,6 +52,7 @@ export const CanvasProvider = ({ children }: PropsWithChildren) => {
     isLeftDown, setIsLeftDown,
     isCloneColorActive, setIsCloneColorActive,
     isPaintBucketActive, setIsPaintBucketActive,
+    canvasClick, notifyCanvasClick,
 
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,

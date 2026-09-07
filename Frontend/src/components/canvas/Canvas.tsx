@@ -4,6 +4,8 @@ import { Panel } from "../toolbar/Panel"
 import { Toolbar } from "../toolbar/Toolbar"
 import { PixelField } from "./PixelField"
 import { PixelInfo } from "./PixelInfo"
+import { ReplayBar } from "../replay/ReplayBar"
+import { useReplay } from "../../contexts/Replay.context"
 
 const POSITION_CLASSES = {
   'top-left': 'translate-x-0 translate-y-0',
@@ -16,16 +18,21 @@ const POSITION_CLASSES = {
 export const Canvas = () => {
   const { panelPosition } = useGlobalVariable();
   const { selectedPixel } = usePixel();
+  const { isActive: isReplaying } = useReplay();
   const positionClass = POSITION_CLASSES[panelPosition] || POSITION_CLASSES['bottom-center'];
 
   return (
     <>
       <PixelField />
-      <PixelInfo selectedPixel={selectedPixel} />
-      <div className={`fixed left-6 top-6 ${positionClass} transition-all duration-300 ease-in-out`}>
-        <Panel />
-      </div>
-      <Toolbar />
+      {/* 리플레이 중에는 과거 화면이므로 픽셀 정보/도구를 숨긴다 */}
+      {!isReplaying && <PixelInfo selectedPixel={selectedPixel} />}
+      {!isReplaying && (
+        <div className={`fixed left-6 top-6 ${positionClass} transition-all duration-300 ease-in-out`}>
+          <Panel />
+        </div>
+      )}
+      {!isReplaying && <Toolbar />}
+      <ReplayBar />
     </>
   )
 }

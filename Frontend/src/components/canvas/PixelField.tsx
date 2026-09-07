@@ -32,6 +32,9 @@ export const PixelField = () => {
     canvasSizeX, canvasSizeY,
     isPanning, setIsPanning,
     fitToScreenSignal, requestFitToScreen,
+    isCloneColorActive,
+    isPaintBucketActive,
+    notifyCanvasClick,
   } = useCanvas();
   const { activeTool } = useGlobalVariable();
 
@@ -57,6 +60,8 @@ export const PixelField = () => {
   const isPanningRef = useRef(isPanning);
   const activeToolRef = useRef(activeTool);
   const paddingRef = useRef(padding);
+  const isCloneColorActiveRef = useRef(isCloneColorActive);
+  const isPaintBucketActiveRef = useRef(isPaintBucketActive);
 
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { cursorPositionRef.current = cursorPosition; }, [cursorPosition]);
@@ -64,6 +69,8 @@ export const PixelField = () => {
   useEffect(() => { isPanningRef.current = isPanning; }, [isPanning]);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { paddingRef.current = padding; }, [padding]);
+  useEffect(() => { isCloneColorActiveRef.current = isCloneColorActive; }, [isCloneColorActive]);
+  useEffect(() => { isPaintBucketActiveRef.current = isPaintBucketActive; }, [isPaintBucketActive]);
 
   const measurePadding = useCallback(() => {
     const viewport = viewportRef.current;
@@ -207,9 +214,20 @@ export const PixelField = () => {
       return;
     }
 
+    /*
+      스포이드/페인트통은 "무장 후 캔버스 클릭"으로 동작한다.
+      전역 mousedown이 아니라 이 경로에서만 알려야 툴바 버튼을 누르는 클릭에 오발동하지 않는다.
+      실제 처리는 색상(currentColor)을 들고 있는 Brush 패널이 이 신호를 받아 수행하므로,
+      여기서는 클릭 사실만 알리고 단일 픽셀 토글은 건너뛴다.
+    */
+    if (isCloneColorActiveRef.current || isPaintBucketActiveRef.current) {
+      notifyCanvasClick(pos);
+      return;
+    }
+
     if (isSelected(pos)) cancelPixel(pos);
     else selectPixel(pos);
-  }, [cancelPixel, isSelected, selectPixel, setSelectedPixel]);
+  }, [cancelPixel, isSelected, selectPixel, setSelectedPixel, notifyCanvasClick]);
 
   const clientToCanvasPixel = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
@@ -292,8 +310,10 @@ export const PixelField = () => {
     const rect = viewport.getBoundingClientRect();
     applyZoomAtClientPoint(zoomRef.current * ZOOM_FACTOR, rect.left + rect.width / 2, rect.top + rect.height / 2);
   });
+  // 화면 맞추기는 0. 예전엔 F도 같은 동작에 묶여 있었는데,
+  // 색칠하기 패널의 페인트통(F)과 충돌해 F를 누르면 채우기 대신 화면이 중앙으로 돌아가 버렸다.
+  // (두 리스너가 같은 키에 동시에 걸려 있었다)
   useKeyboardShortcut("0", () => requestFitToScreen());
-  useKeyboardShortcut("F", () => requestFitToScreen());
 
   useKeyboardShortcut("Shift", () => setDragMode(activeTool === Tool.BRUSH ? dragMode === DragMode.SELECT ? DragMode.NONE : DragMode.SELECT : dragMode));
   useKeyboardShortcut("Ctrl", () => setDragMode(activeTool === Tool.BRUSH ? dragMode === DragMode.CANCEL ? DragMode.NONE : DragMode.CANCEL : dragMode));
@@ -402,12 +422,17 @@ export const PixelField = () => {
     if (!context) return;
 
     context.clearRect(0, 0, overlay.width, overlay.height);
-    context.strokeStyle = '#22c55e';
-    context.lineWidth = 1;
+
+    /*
+      네이티브 해상도에서 한 칸은 1×1px이라 '테두리'를 그릴 여백이 없다.
+      (기존엔 strokeRect의 폭/높이가 0이라 아무것도 그려지지 않았다)
+      칸 전체를 반투명하게 채우면 아래 픽셀 색이 비쳐 보이면서 선택 여부도 확실히 드러나고,
+      CSS 확대 시에도 image-rendering: pixelated 덕분에 또렷하게 커진다.
+    */
+    context.fillStyle = 'rgba(34, 197, 94, 0.55)';
 
     selectedPixels.forEach((selection) => {
-      // 네이티브 1×1 셀 테두리 (CSS 확대 시 함께 스케일됨)
-      context.strokeRect(selection.x + 0.5, selection.y + 0.5, 1 - 1, 1 - 1);
+      context.fillRect(selection.x, selection.y, 1, 1);
     });
   }, [selectedPixels, isCanvasReady]);
 
@@ -415,6 +440,9 @@ export const PixelField = () => {
    * 드래그 선택/해제 (팬 중에는 동작하지 않음)
    */
   useEffect(() => {
+    // 스포이드/페인트통이 무장 중이면 드래그 선택은 쉰다.
+    // (둘 다 돌면 한 번의 클릭에 단일 칸 선택과 영역 선택이 겹쳐 결과가 뒤섞인다)
+    if (isCloneColorActive || isPaintBucketActive) return;
     if (isPanning || activeTool !== Tool.BRUSH || dragMode === DragMode.NONE || !isLeftDown) return;
     switch (dragMode) {
       case DragMode.SELECT:
@@ -424,7 +452,7 @@ export const PixelField = () => {
         cancelPixel({ x: cursorPosition.x, y: cursorPosition.y });
         break;
     }
-  }, [cursorPosition, dragMode, isLeftDown, isPanning, activeTool, selectPixel, cancelPixel]);
+  }, [cursorPosition, dragMode, isLeftDown, isPanning, activeTool, selectPixel, cancelPixel, isCloneColorActive, isPaintBucketActive]);
 
   // 포인터: 좌표 / 팬 / 클릭 / 휠 줌
   useEffect(() => {

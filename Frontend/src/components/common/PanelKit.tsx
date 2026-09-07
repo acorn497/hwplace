@@ -22,12 +22,12 @@ export const PanelShell = ({
   children?: ReactNode;
 }) => {
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0">
-      <header className="flex items-center justify-between gap-2 pb-2 border-b border-border shrink-0">
-        <h2 className="text-base font-semibold text-content">{title}</h2>
+    <div className="flex flex-col gap-2.5 h-full min-h-0">
+      <header className="flex items-center justify-between gap-2 pb-1.5 border-b border-border shrink-0">
+        <h2 className="text-sm font-semibold text-content">{title}</h2>
         {actions ? <div className="flex items-center gap-1.5 shrink-0">{actions}</div> : null}
       </header>
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {children}
       </div>
     </div>
@@ -174,12 +174,12 @@ export const MetricTile = ({
   className?: string;
 }) => {
   return (
-    <div className={`flex flex-col justify-between p-3 rounded-lg bg-surface-hover border border-border ${className ?? ''}`}>
-      <div className="flex items-center gap-1.5 text-content-muted mb-2">
+    <div className={`flex min-h-0 flex-col justify-center gap-0.5 px-2.5 py-2 rounded-lg bg-surface-hover border border-border ${className ?? ''}`}>
+      <div className="flex items-center gap-1.5 text-content-muted">
         {icon}
-        <span className="text-xs font-medium truncate">{label}</span>
+        <span className="text-[11px] font-medium truncate">{label}</span>
       </div>
-      <div className="text-xl font-bold text-content truncate">{value}</div>
+      <div className="text-base font-bold text-content truncate leading-tight">{value}</div>
     </div>
   );
 };

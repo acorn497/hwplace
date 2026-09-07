@@ -212,3 +212,99 @@ input[type="number"] {
 .joseon-font {
   font-family: 'Joseon', sans-serif;
 }
+
+/*
+ ========== REPLAY SCRUBBER ====================
+ 트랙은 아래 레이어에서 직접 그리므로, input은 투명한 썸만 남긴다.
+*/
+
+.replay-scrubber {
+  height: 1.5rem;
+}
+
+.replay-scrubber::-webkit-slider-runnable-track {
+  height: 1.5rem;
+  background: transparent;
+}
+
+.replay-scrubber::-moz-range-track {
+  height: 1.5rem;
+  background: transparent;
+}
+
+.replay-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: 0.3125rem;
+  border-radius: 9999px;
+  background: var(--hw-accent);
+  border: 2px solid var(--hw-app-bg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  cursor: grab;
+}
+
+.replay-scrubber::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 9999px;
+  background: var(--hw-accent);
+  border: 2px solid var(--hw-app-bg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  cursor: grab;
+}
+
+.replay-scrubber:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.replay-scrubber:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
+/*
+ ========== RGB 채널 슬라이더 ===================
+ 트랙 배경은 인라인 style의 채널 그라디언트가 담당하므로 여기선 형태와 썸만 정의한다.
+ 썸은 흰 테두리 + 어두운 링으로 감싸 어떤 트랙 색 위에서도 위치가 보이게 한다.
+*/
+
+.channel-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 0.5rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--hw-border);
+}
+
+.channel-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: none;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.3);
+  cursor: grab;
+}
+
+.channel-slider::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: none;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.3);
+  cursor: grab;
+}
+
+.channel-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.channel-slider:active::-moz-range-thumb {
+  cursor: grabbing;
+}

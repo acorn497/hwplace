@@ -46,6 +46,20 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
   const pendingUpdatesRef = useRef<Map<string, { x: number; y: number; r: number; g: number; b: number }>>(new Map());
   /** 청크 수신 세션이 진행 중인지 (요청 ~ chunk_finish) */
   const isLoadingRef = useRef(false);
+  /**
+   * 소켓 이펙트 안에서 만들어지는 청크 재요청 함수를 밖으로 노출하기 위한 통로.
+   * 리플레이를 빠져나올 때 실시간 캔버스를 다시 받아야 하는데, 청크 요청은
+   * 원래 연결 시점에만 일어나므로 이 경로가 필요하다.
+   */
+  const requestChunksRef = useRef<(() => void) | null>(null);
+  /**
+   * 리플레이 재생 중인지.
+   *
+   * 리플레이는 버퍼를 과거 상태로 바꿔놓기 때문에, 이때 도착한 실시간 갱신을 그대로
+   * 얹으면 과거 화면에 현재 픽셀이 섞여버린다. 그래서 리플레이 중에는 실시간 반영을 멈춘다.
+   * (놓친 갱신은 리플레이를 나갈 때 캔버스를 통째로 다시 받으므로 유실되지 않는다.)
+   */
+  const replayActiveRef = useRef(false);
 
   const [canvasEpoch, setCanvasEpoch] = useState(0);
   const [pixelVersion, setPixelVersion] = useState(0);
@@ -59,6 +73,35 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
     const regions = dirtyRef.current;
     dirtyRef.current = [];
     return regions;
+  }, []);
+
+  /**
+   * 리플레이가 캔버스 버퍼를 통째로 갈아끼운 뒤 호출한다.
+   *
+   * 리플레이는 실시간 경로(소켓)를 거치지 않고 버퍼를 직접 쓰므로, 렌더러에게
+   * "전체를 다시 그려라"고 알려줄 통로가 따로 필요하다. 전체를 dirty로 표시하고
+   * pixelVersion을 올리면 기존 렌더 경로가 그대로 재사용된다.
+   */
+  const markReplayFrame = useCallback(() => {
+    const { width, height } = canvasSizeRef.current;
+    if (!canvasBufferRef.current || width <= 0 || height <= 0) return;
+
+    // 매 프레임 영역이 쌓이면 렌더가 느려지므로, 전체 갱신 하나로 합친다
+    dirtyRef.current = [{ x: 0, y: 0, width, height }];
+    setPixelVersion((prev) => prev + 1);
+  }, []);
+
+  /**
+   * 실시간 캔버스를 서버에서 다시 받아온다.
+   * 리플레이가 버퍼를 과거 상태로 덮어썼기 때문에, 빠져나올 때 현재 상태로 되돌려야 한다.
+   */
+  const reloadLiveCanvas = useCallback(() => {
+    requestChunksRef.current?.();
+  }, []);
+
+  /** 리플레이 진입/종료를 알린다. 실시간 갱신 반영 여부를 가른다. */
+  const setReplayActive = useCallback((active: boolean) => {
+    replayActiveRef.current = active;
   }, []);
 
   const getPixelColor = useCallback((x: number, y: number) => {
@@ -93,6 +136,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       console.log('Requesting canvas chunks');
       socket.emit('request-chunks');
     };
+    requestChunksRef.current = requestChunks;
 
     socket.on('chunk_start', (data) => {
       console.log('Chunk loading started:', data);
@@ -203,6 +247,10 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
     socket.on('batch-pixels-updated', (data: { pixels: Array<{ x: number, y: number, color: { r: number, g: number, b: number } }> }) => {
       console.log(`Received batch update: ${data.pixels.length} pixels`);
 
+      // 리플레이 중에는 화면이 과거 시점이므로 실시간 갱신을 얹지 않는다.
+      // 나갈 때 전체 캔버스를 다시 받으니 여기서 버려도 최신 상태를 잃지 않는다.
+      if (replayActiveRef.current) return;
+
       const buffer = canvasBufferRef.current;
       const { width, height } = canvasSizeRef.current;
 
@@ -251,6 +299,7 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
       socket.off('chunk_finish');
       socket.off('chunk_error');
       socket.off('batch-pixels-updated');
+      requestChunksRef.current = null;
     };
   }, [socket, setCanvasStatus, setVersion, setCanvasSizeX, setCanvasSizeY]);
 
@@ -263,6 +312,9 @@ export const PixelProvider = ({ children }: PropsWithChildren) => {
     canvasEpoch,
     pixelVersion,
     consumeDirtyRegions,
+    markReplayFrame,
+    reloadLiveCanvas,
+    setReplayActive,
     getPixelColor,
     selectedPixels, setSelectedPixels,
     selectedPixel, setSelectedPixel,

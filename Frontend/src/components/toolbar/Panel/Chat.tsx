@@ -40,7 +40,7 @@ const ChatBubble = ({ message, showSender }: { message: ChatMessage, showSender:
 export const Chat = () => {
   const { setActiveTool } = useGlobalVariable();
   const { accessToken } = useAuth();
-  const { messages, sendMessage, clearUnread } = useChat();
+  const { messages, sendMessage, clearUnread, clearHistory } = useChat();
 
   const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,21 @@ export const Chat = () => {
   return (
     <PanelShell
       title="채팅"
-      actions={<span className="text-xs text-content-subtle">{messages.length}개의 메시지</span>}
+      actions={
+        <>
+          <span className="text-xs text-content-subtle">{messages.length}개의 메시지</span>
+          {messages.length > 0 ? (
+            <button
+              type="button"
+              onClick={clearHistory}
+              title="저장된 대화 기록을 지웁니다"
+              className="focus-ring rounded-md px-1.5 py-0.5 text-[11px] text-content-muted transition-colors hover:bg-surface-hover hover:text-danger cursor-pointer"
+            >
+              기록 지우기
+            </button>
+          ) : null}
+        </>
+      }
     >
       <div className="flex flex-col gap-3 h-full min-h-0">
         {/* 메시지 목록: 로그인 여부와 상관없이 항상 공개 */}
