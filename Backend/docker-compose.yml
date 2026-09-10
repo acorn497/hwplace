@@ -31,14 +31,32 @@ services:
       # 컨트롤러가 개수를 세기 전에 파싱이 끝나므로 입구에서 줄인다.
       - BODY_SIZE_LIMIT=4mb
 
-      # 칠하기 쿼터 (유저별) — 10분당 20,000 픽셀
-      - PAINT_QUOTA_WINDOW_SECONDS=600
-      - PAINT_QUOTA_PIXELS=20000
+      # 칠하기 쿼터 (유저별) — 3분당 5,000 픽셀
+      - PAINT_QUOTA_WINDOW_SECONDS=180
+      - PAINT_QUOTA_PIXELS=5000
 
       # 자동 제재 
       - PAINT_AUTO_RESTRICT=true
       - PAINT_ABUSE_STRIKES=20
       - PAINT_ABUSE_WINDOW_SECONDS=300
+
+      # 신규 계정 쿼터 (가입 후 24시간은 낮은 한도 → 계정 찍어내기 무력화)
+      - PAINT_QUOTA_NEW_ACCOUNT_PIXELS=1000
+      - PAINT_NEW_ACCOUNT_HOURS=24
+
+      # IP 단위 픽셀 총량 (계정과 무관한 축)
+      - PAINT_QUOTA_IP_PIXELS=15000
+
+      # 앞단 프록시가 있을 때만 true. 없이 켜면 XFF 위조로 IP 한도가 무력화된다.
+      - TRUST_PROXY=false
+
+      # 샌드박스 캔버스 (봇/스크립트용 무제한 구역)
+      # 본 캔버스와 분리된 공간. 매시 정각 초기화되고 리플레이 이력을 남기지 않는다.
+      - SANDBOX_SIZE_X=512
+      - SANDBOX_SIZE_Y=512
+      - SANDBOX_RESET_MINUTES=60
+      - SANDBOX_GAP=64
+      - SANDBOX_MAX_PIXELS_PER_REQUEST=50000
 
       # IP별 요청 수 제한 (초 / 분 / 시간)
       - THROTTLE_SHORT=20

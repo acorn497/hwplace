@@ -8,6 +8,7 @@
  * E: VALIDATION
  * F: SERVER
  * G: ADMIN
+ * H: API TOKEN
  */
 
 // Internal Status Code
@@ -60,6 +61,17 @@ export const ISC = {
 
     /** 요청 빈도 제한(IP 기준)에 걸렸다 */
     RATE_LIMITED: 'C112',
+  },
+
+  TOKEN: {
+    /** 토큰 개수 상한 초과 */
+    LIMIT_EXCEEDED: 'H100',
+
+    /** 토큰을 찾을 수 없음 */
+    NOT_FOUND: 'H110',
+
+    /** 유효하지 않은 API 토큰 */
+    INVALID: 'H120',
   },
 
   ADMIN: {

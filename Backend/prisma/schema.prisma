@@ -85,10 +85,36 @@ model user {
   USER_RESTRICTED Boolean  @default(false)
   USER_PAINTED    Int      @default(0)
   USER_ROLE       Role     @default(USER)
+  /// 가입 시각. 갓 만든 계정의 쿼터를 낮춰 '계정 찍어내기'로 쿼터를 우회하는 것을 막는다.
+  USER_CREATED_AT DateTime @default(now())
 
   pixels          pixel[]
   canvas_events   canvas_events[]
   admin_logs      admin_log[]
+  api_tokens      api_token[]
+}
+
+/// 외부(스크립트/봇)에서 샌드박스 캔버스에 접근하기 위한 토큰.
+///
+/// 로그인 JWT와 의도적으로 분리했다. JWT는 본 캔버스를 칠할 수 있지만 이 토큰은 못 한다.
+/// "브라우저 요청만 허용"은 헤더 위조로 우회되므로 불가능하고, 대신 '자격증명의 종류'로
+/// 권한을 가른다. 이건 서명/해시 기반이라 위조할 수 없다.
+model api_token {
+  token_idx    Int       @id @default(autoincrement())
+  userId       Int
+  /// 토큰 원문의 SHA-256 해시. 원문은 발급 시 한 번만 보여주고 저장하지 않는다.
+  token_hash   String    @unique @db.VarChar(64)
+  /// 목록에서 어떤 토큰인지 알아보기 위한 앞 8자 (원문 아님)
+  token_prefix String    @db.VarChar(16)
+  /// 사용자가 붙이는 이름 ("내 봇" 등)
+  label        String    @db.VarChar(32)
+  created_at   DateTime  @default(now())
+  last_used_at DateTime?
+  revoked      Boolean   @default(false)
+
+  user         user      @relation(fields: [userId], references: [USER_INDEX], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// 관리자가 수행한 행위의 감사 로그.

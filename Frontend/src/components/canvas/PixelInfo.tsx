@@ -58,7 +58,7 @@ export const PixelInfo = ({ selectedPixel }: PixelInfoProps) => {
   if (!selectedPixel) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-surface-raised/95 backdrop-blur-lg border border-border rounded-lg shadow-sm px-3 py-2 min-w-60">
+    <div className="fixed z-10 top-4 left-1/2 -translate-x-1/2 bg-surface-raised/95 backdrop-blur-lg border border-border rounded-lg shadow-sm px-3 py-2 min-w-60">
       <div className="space-y-1.5">
         {/* Header */}
         <div className="flex items-center gap-2">

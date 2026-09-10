@@ -10,6 +10,7 @@ import { NotificationProvider } from './contexts/Notification.context.tsx'
 import { ChatProvider } from './contexts/Chat.context.tsx'
 import { ThemeProvider } from './contexts/Theme.context.tsx'
 import { ReplayProvider } from './contexts/Replay.context.tsx'
+import { SandboxProvider } from './contexts/Sandbox.context.tsx'
 
 createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')!).render(
                             <CanvasProvider>
                                 <PixelProvider>
                                     <ReplayProvider>
-                                        <App />
+                                        <SandboxProvider>
+                                            <App />
+                                        </SandboxProvider>
                                     </ReplayProvider>
                                 </PixelProvider>
                             </CanvasProvider>

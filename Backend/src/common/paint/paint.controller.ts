@@ -22,6 +22,8 @@ export class PaintController {
    * 쿼터 한도를 그대로 요청 상한으로 쓴다.
    */
   private readonly MAX_PIXELS_PER_REQUEST: number;
+  /** X-Forwarded-For 를 신뢰할지. 앞단 프록시가 있는 배포에서만 true 로 둘 것. */
+  private readonly TRUST_PROXY: boolean;
 
   constructor(
     private readonly configService: ConfigService,
@@ -33,13 +35,36 @@ export class PaintController {
   ) {
     this.BATCH_SIZE = parseInt(this.configService.get('WORKER_BATCH_SIZE') ?? '500')
     this.MAX_PIXELS_PER_REQUEST = this.quotaService.limit;
+    this.TRUST_PROXY = this.configService.get<string>('TRUST_PROXY', 'false') === 'true';
   };
+
+  /**
+   * 요청자의 IP.
+   *
+   * 프록시/로드밸런서 뒤에 있으면 req.ip 가 프록시 주소가 되어 모든 유저가 한 덩어리로 묶인다.
+   * 그렇다고 X-Forwarded-For 를 그냥 믿으면 헤더를 위조해 IP 한도를 무한히 우회할 수 있다.
+   *
+   * 그래서 신뢰 여부를 환경변수로 명시하게 했다. 앞단에 프록시를 두는 배포에서만 켤 것.
+   * (Express 의 trust proxy 가 켜져 있어야 req.ip 도 XFF 를 반영한다)
+   */
+  private resolveClientIp(request: any): string {
+    if (this.TRUST_PROXY) {
+      const forwarded = request.headers?.['x-forwarded-for'];
+      if (typeof forwarded === 'string' && forwarded.length > 0) {
+        // "client, proxy1, proxy2" 중 맨 앞이 원 클라이언트다
+        return forwarded.split(',')[0].trim();
+      }
+    }
+
+    return request.ip ?? request.socket?.remoteAddress ?? 'unknown';
+  }
 
   /** 현재 남은 칠하기 쿼터 (프론트가 잔여량을 표시하는 데 쓴다) */
   @UseGuards(AuthGuard)
   @Get('/quota')
   async getQuota(@Request() request) {
-    const quota = await this.quotaService.peek(request.user.index);
+    const limit = this.quotaService.resolveLimit(request.user.createdAt);
+    const quota = await this.quotaService.peek(request.user.index, limit);
 
     const response: GlobalResponse = {
       title: '칠하기 쿼터',
@@ -50,6 +75,9 @@ export class PaintController {
         used: quota.used,
         resetAfter: quota.resetAfter,
         windowSeconds: this.quotaService.windowSeconds,
+        // 신규 계정이라 한도가 낮은 상태인지 프론트가 안내할 수 있게 알려준다
+        isNewAccount: quota.limit < this.quotaService.limit,
+        newAccountHours: this.quotaService.newAccountHours,
       },
     };
 
@@ -73,8 +101,36 @@ export class PaintController {
       } satisfies GlobalResponse, HttpStatus.PAYLOAD_TOO_LARGE);
     }
 
-    // 2) 쿼터를 소비한다. 한도를 넘으면 한 픽셀도 소비하지 않고 거절된다.
-    const quota = await this.quotaService.consume(userIdx, body.length);
+    /*
+      2) IP 총량을 먼저 본다.
+
+      유저별 쿼터는 계정을 새로 만들면 초기화되므로, 계정을 여러 개 찍으면 우회된다.
+      IP 축을 하나 더 두면 계정을 몇 개 만들든 한 IP에서 나가는 총량이 묶인다.
+
+      순서가 중요하다. 유저 쿼터를 먼저 소비하면, IP 한도에 걸려 거절된 요청 때문에
+      유저 쿼터만 축나는 '이중 차감'이 생긴다. 넓은 축(IP)을 먼저 통과시킨다.
+    */
+    const ip = this.resolveClientIp(request);
+    const ipQuota = await this.quotaService.consumeIp(ip, body.length);
+
+    if (!ipQuota.allowed) {
+      throw new HttpException({
+        title: '칠하기',
+        message: `이 네트워크에서 칠할 수 있는 한도를 초과했습니다. ${ipQuota.resetAfter}초 후에 다시 시도해 주세요.`,
+        internalStatusCode: ISC.PIXEL.QUOTA_EXCEEDED,
+        data: {
+          limit: ipQuota.limit,
+          remaining: ipQuota.remaining,
+          used: ipQuota.used,
+          resetAfter: ipQuota.resetAfter,
+          scope: 'ip',
+        },
+      } satisfies GlobalResponse, HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    // 3) 유저 쿼터. 갓 가입한 계정은 낮은 한도를 받는다.
+    const limit = this.quotaService.resolveLimit(request.user.createdAt);
+    const quota = await this.quotaService.consume(userIdx, body.length, limit);
 
     if (!quota.allowed) {
       // 반복 위반은 누적해 두고, 임계치를 넘으면 계정을 자동으로 세운다.
@@ -84,7 +140,11 @@ export class PaintController {
         title: '칠하기',
         message: restricted
           ? '과도한 요청으로 계정이 제한되었습니다. 관리자에게 문의해 주세요.'
-          : `칠하기 한도를 초과했습니다. ${quota.resetAfter}초 후에 다시 시도해 주세요.`,
+          : limit < this.quotaService.limit
+            // 왜 한도가 낮은지 모르면 버그로 보인다. 이유를 분명히 말해준다.
+            ? `가입 후 ${this.quotaService.newAccountHours}시간 동안은 칠하기 한도가 낮습니다. `
+              + `${quota.resetAfter}초 후에 다시 시도해 주세요.`
+            : `칠하기 한도를 초과했습니다. ${quota.resetAfter}초 후에 다시 시도해 주세요.`,
         internalStatusCode: restricted
           ? ISC.AUTH.AUTO_RESTRICTED
           : ISC.PIXEL.QUOTA_EXCEEDED,

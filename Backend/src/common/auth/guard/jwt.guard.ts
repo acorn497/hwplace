@@ -47,7 +47,7 @@ export class AuthGuard implements CanActivate {
       ? null
       : await this.prisma.user.findUnique({
         where: { USER_INDEX: index },
-        select: { USER_INDEX: true, USER_ROLE: true, USER_RESTRICTED: true },
+        select: { USER_INDEX: true, USER_ROLE: true, USER_RESTRICTED: true, USER_CREATED_AT: true },
       });
 
     if (!exist) {
@@ -63,6 +63,8 @@ export class AuthGuard implements CanActivate {
     // 이미 조회한 김에 최신 값을 요청에 실어 뒤쪽 가드/컨트롤러가 쓰게 한다.
     request['user'].role = exist.USER_ROLE;
     request['user'].restricted = exist.USER_RESTRICTED;
+    // 신규 계정 쿼터 판정에 쓴다. 이미 조회한 행이라 추가 쿼리가 들지 않는다.
+    request['user'].createdAt = exist.USER_CREATED_AT;
 
     return true;
   }

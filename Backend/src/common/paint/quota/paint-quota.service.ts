@@ -34,6 +34,20 @@ export class PaintQuotaService implements OnModuleDestroy {
   /** 창 안에서 허용하는 픽셀 수 */
   public readonly limit: number;
 
+  /** 갓 가입한 계정에 적용하는 낮은 한도 */
+  public readonly newAccountLimit: number;
+  /** 이 시간이 지나야 정상 한도를 받는다 */
+  public readonly newAccountHours: number;
+
+  /**
+   * IP 단위 총량.
+   *
+   * 유저별 쿼터는 계정을 새로 만들면 초기화된다. 계정을 여러 개 찍어 우회하는 것을 막으려면
+   * 계정과 무관한 축이 하나 더 필요하다. 여러 사람이 같은 공유망(학교/회사)을 쓸 수 있으므로
+   * 유저 한도보다 넉넉하게 잡는다.
+   */
+  public readonly ipLimit: number;
+
   /**
    * 소비 스크립트.
    *
@@ -92,8 +106,13 @@ export class PaintQuotaService implements OnModuleDestroy {
       비교는 강제 변환으로 우연히 동작하지만 산술(+)은 문자열 연결이 되고,
       프론트의 toLocaleString() 도 천단위 구분을 잃는다.
     */
-    this.windowSeconds = Number(this.configService.get('PAINT_QUOTA_WINDOW_SECONDS', 600));
-    this.limit = Number(this.configService.get('PAINT_QUOTA_PIXELS', 20_000));
+    this.windowSeconds = Number(this.configService.get('PAINT_QUOTA_WINDOW_SECONDS', 180));
+    this.limit = Number(this.configService.get('PAINT_QUOTA_PIXELS', 5_000));
+
+    this.newAccountLimit = Number(this.configService.get('PAINT_QUOTA_NEW_ACCOUNT_PIXELS', 1_000));
+    this.newAccountHours = Number(this.configService.get('PAINT_NEW_ACCOUNT_HOURS', 24));
+
+    this.ipLimit = Number(this.configService.get('PAINT_QUOTA_IP_PIXELS', 15_000));
 
     this.redis = new Redis({
       host: this.configService.get<string>('REDIS_HOST', 'localhost'),
@@ -112,11 +131,41 @@ export class PaintQuotaService implements OnModuleDestroy {
     return `paint:quota:${userIndex}`;
   }
 
+  private getIpKey(ip: string) {
+    return `paint:quota:ip:${ip}`;
+  }
+
+  /**
+   * 가입 시각으로 정할 이 계정의 한도.
+   * 갓 만든 계정은 낮은 한도를 받으므로, 계정을 찍어내도 얻는 것이 적다.
+   */
+  public resolveLimit(createdAt: Date | null | undefined) {
+    if (!createdAt) return this.limit;
+
+    const ageHours = (Date.now() - createdAt.getTime()) / 3_600_000;
+
+    return ageHours < this.newAccountHours ? this.newAccountLimit : this.limit;
+  }
+
   /**
    * 쿼터에서 pixelCount 만큼 소비를 시도한다.
    * 한도를 넘으면 아무것도 소비하지 않고 allowed=false 를 돌려준다(전부 아니면 전무).
+   *
+   * limitOverride 를 주면 그 한도로 판단한다 (신규 계정의 낮은 한도).
    */
-  async consume(userIndex: number, pixelCount: number): Promise<QuotaResult> {
+  async consume(userIndex: number, pixelCount: number, limitOverride?: number): Promise<QuotaResult> {
+    return this.consumeKey(this.getKey(userIndex), pixelCount, limitOverride ?? this.limit);
+  }
+
+  /**
+   * IP 단위 총량에서 소비한다.
+   * 계정을 몇 개 만들든 한 IP에서 나가는 픽셀 총합이 여기서 묶인다.
+   */
+  async consumeIp(ip: string, pixelCount: number): Promise<QuotaResult> {
+    return this.consumeKey(this.getIpKey(ip), pixelCount, this.ipLimit);
+  }
+
+  private async consumeKey(key: string, pixelCount: number, limit: number): Promise<QuotaResult> {
     const now = Date.now();
     const windowMs = this.windowSeconds * 1000;
     const member = `${now}-${Math.random().toString(36).slice(2, 10)}`;
@@ -125,10 +174,10 @@ export class PaintQuotaService implements OnModuleDestroy {
       const [allowed, remaining, used, resetAfter] = await this.redis.eval(
         PaintQuotaService.CONSUME_SCRIPT,
         1,
-        this.getKey(userIndex),
+        key,
         now,
         windowMs,
-        this.limit,
+        limit,
         pixelCount,
         member,
       ) as [number, number, number, number];
@@ -136,7 +185,7 @@ export class PaintQuotaService implements OnModuleDestroy {
       return {
         allowed: allowed === 1,
         remaining: Math.max(remaining, 0),
-        limit: this.limit,
+        limit,
         used,
         resetAfter: Math.max(resetAfter, 0),
       };
@@ -147,8 +196,8 @@ export class PaintQuotaService implements OnModuleDestroy {
 
       return {
         allowed: true,
-        remaining: this.limit,
-        limit: this.limit,
+        remaining: limit,
+        limit,
         used: 0,
         resetAfter: 0,
       };
@@ -156,7 +205,7 @@ export class PaintQuotaService implements OnModuleDestroy {
   }
 
   /** 소비하지 않고 현재 남은 쿼터만 조회한다 (UI 표시용) */
-  async peek(userIndex: number): Promise<QuotaResult> {
-    return this.consume(userIndex, 0);
+  async peek(userIndex: number, limitOverride?: number): Promise<QuotaResult> {
+    return this.consume(userIndex, 0, limitOverride);
   }
 }

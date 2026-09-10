@@ -98,7 +98,14 @@ export const Brush = () => {
    * 남은 칠하기 쿼터. null 이면 아직 모른다(비로그인이거나 조회 전).
    * 서버가 단일 출처이고, 여기 값은 표시 전용이다.
    */
-  const [quota, setQuota] = useState<{ limit: number; remaining: number; resetAfter: number } | null>(null);
+  const [quota, setQuota] = useState<{
+    limit: number;
+    remaining: number;
+    resetAfter: number;
+    /** 가입 직후라 한도가 낮은 상태인지 */
+    isNewAccount?: boolean;
+    newAccountHours?: number;
+  } | null>(null);
   /** 나눠 보내는 중일 때의 진행 상황 (버튼에 표시) */
   const [paintProgress, setPaintProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -215,6 +222,8 @@ export const Brush = () => {
       limit: result.data.limit,
       remaining: result.data.remaining,
       resetAfter: result.data.resetAfter,
+      isNewAccount: result.data.isNewAccount,
+      newAccountHours: result.data.newAccountHours,
     });
   }, [accessToken]);
 
@@ -569,6 +578,12 @@ export const Brush = () => {
                 {quota.remaining === 0 && quota.resetAfter > 0 ?
                   <span className="text-[10px] text-content-subtle">
                     약 {Math.ceil(quota.resetAfter / 60)}분 후 회복
+                  </span>
+                  : null}
+                {/* 한도가 낮은 이유를 알려주지 않으면 버그로 보인다 */}
+                {quota.isNewAccount ?
+                  <span className="text-[10px] text-content-subtle">
+                    가입 {quota.newAccountHours}시간 후 한도가 늘어납니다
                   </span>
                   : null}
               </div>

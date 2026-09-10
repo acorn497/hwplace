@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { usePixel } from "../../contexts/Pixel.context";
+import { useSandbox } from "../../contexts/Sandbox.context";
+import { SandboxField } from "./SandboxField";
 import { useCanvas } from "../../contexts/Canvas.context";
 import { useGlobalVariable } from "../../contexts/GlobalVariable.context";
 import { useKeyboardShortcut } from "../../hooks/useKeyboardShortcut";
@@ -7,6 +9,9 @@ import { Tool } from "../../contexts/enums/Tool.enum";
 import { DragMode } from "../../contexts/enums/DragMode.enum";
 import { apiFetch, FetchMethod } from "../../hooks/useFetch";
 import { GRID_MIN_ZOOM } from "../../contexts/enums/Canvas.const";
+
+/** 메인/샌드박스 사이 간격의 화면상 최소 폭(px). 축소해도 두 구역이 붙어 보이지 않게 한다. */
+const MIN_SANDBOX_GAP_PX = 48;
 
 /** 키보드 줌 배율 스텝 (연속 줌) */
 const ZOOM_FACTOR = 1.25;
@@ -48,6 +53,9 @@ export const PixelField = () => {
   const { activeTool, showGrid } = useGlobalVariable();
 
   const isCanvasReady = canvasSizeX > 0 && canvasSizeY > 0;
+
+  // 샌드박스 배치 정보. 서버가 크기와 간격을 알려주므로 프론트가 하드코딩하지 않는다.
+  const { info: sandboxInfo } = useSandbox();
 
   const [padding, setPadding] = useState({ x: 800, y: 600 });
   const [spaceHeld, setSpaceHeld] = useState(false);
@@ -248,10 +256,17 @@ export const PixelField = () => {
     const x = Math.floor((clientX - rect.left) * (canvas.width / rect.width));
     const y = Math.floor((clientY - rect.top) * (canvas.height / rect.height));
 
-    return {
-      x: Math.max(0, Math.min(canvasSizeX - 1, x)),
-      y: Math.max(0, Math.min(canvasSizeY - 1, y)),
-    };
+    /*
+      범위를 벗어난 클릭은 '가장자리로 당기지' 말고 버려야 한다.
+
+      예전에는 clamp 해서 캔버스 밖 클릭도 항상 유효한 좌표를 돌려줬다.
+      메인 캔버스만 있을 때는 여백을 클릭한 것이라 큰 문제가 아니었지만,
+      오른쪽에 샌드박스가 생긴 지금은 샌드박스를 클릭해도 메인 캔버스의
+      맨 오른쪽 열(x=1023)이 선택돼 버린다. 구역이 섞이는 셈이다.
+    */
+    if (x < 0 || x >= canvasSizeX || y < 0 || y >= canvasSizeY) return null;
+
+    return { x, y };
   }, [canvasSizeX, canvasSizeY]);
 
   // ==========================================
@@ -571,17 +586,41 @@ export const PixelField = () => {
   const displayH = canvasSizeY * zoom;
   const cursorStyle = isPanning ? 'grabbing' : spaceHeld ? 'grab' : undefined;
 
+  /*
+    샌드박스를 메인 캔버스 오른쪽에 붙인다.
+    스크롤 영역이 샌드박스까지 덮어야 그쪽으로 스크롤해서 볼 수 있으므로,
+    바깥 컨테이너 폭에 (간격 + 샌드박스 폭)을 더한다.
+  */
+  const sandboxWidth = sandboxInfo ? sandboxInfo.width * zoom : 0;
+  /*
+    간격도 배율을 따라가지만 화면상 최소 폭을 보장한다.
+    축소했을 때(zoom 0.25 등) 간격이 16px까지 줄면 두 구역이 붙은 것처럼 보이는데,
+    구분이 가장 필요한 순간이 바로 그 축소 상태다.
+  */
+  const sandboxGap = sandboxInfo ? Math.max(sandboxInfo.gap * zoom, MIN_SANDBOX_GAP_PX) : 0;
+  const extraWidth = sandboxInfo ? sandboxGap + sandboxWidth : 0;
+
   return (
+    /*
+      뷰포트를 '독립된 스태킹 컨텍스트'로 만든다 (relative + z-0).
+
+      이게 없으면 캔버스 내부 레이어(그리드 z-5, 커서 z-10)가 조상에 갇히지 않고
+      루트 컨텍스트에서 UI와 직접 경쟁한다. 툴바/패널은 z-index가 없어 auto(=0)라
+      z-5인 그리드가 그 위에 그려졌다.
+
+      여기서 컨텍스트를 열어두면 내부 z값이 아무리 커도 이 요소의 z-0 안에 갇히므로,
+      앞으로 캔버스 안에 레이어를 추가해도 UI를 덮는 일이 없다.
+    */
     <div
       ref={viewportRef}
-      className="w-screen h-screen overflow-auto bg-canvas-void"
+      className="relative z-0 w-screen h-screen overflow-auto bg-canvas-void"
       style={{ cursor: cursorStyle }}
     >
       {isCanvasReady && (
         <div
           className="relative"
           style={{
-            width: displayW + padding.x * 2,
+            width: displayW + extraWidth + padding.x * 2,
             height: displayH + padding.y * 2,
           }}
         >
@@ -595,6 +634,21 @@ export const PixelField = () => {
               height: displayH,
             }}
           >
+            {/*
+              메인 캔버스 머리말.
+              라벨이 샌드박스에만 있으면 대비가 약해서 어느 쪽이 '진짜'인지 헷갈린다.
+              양쪽에 같은 형식으로 달아 두 구역이 대등하게 구분되도록 한다.
+            */}
+            {sandboxInfo ? (
+              <div className="absolute bottom-full left-0 mb-2 flex items-center gap-2 whitespace-nowrap">
+                <span className="px-2 py-0.5 rounded-md bg-accent text-accent-fg text-xs font-bold">
+                  메인 캔버스
+                </span>
+                <span className="text-xs text-content-muted">
+                  {canvasSizeX}×{canvasSizeY} · 영구 보존
+                </span>
+              </div>
+            ) : null}
             <canvas
               ref={canvasRef}
               className="pixelated border border-border absolute top-0 left-0"
@@ -635,6 +689,24 @@ export const PixelField = () => {
               }}
             />
           </div>
+
+          {/*
+            샌드박스. 메인 캔버스 오른쪽에 간격을 두고 붙인다.
+            위쪽을 맞춰(top 동일) 두 구역의 시작점이 같은 높이에 오게 한다.
+          */}
+          {sandboxInfo ? (
+            <div
+              className="absolute"
+              style={{
+                left: padding.x + displayW + sandboxGap,
+                top: padding.y,
+                width: sandboxWidth,
+                height: sandboxInfo.height * zoom,
+              }}
+            >
+              <SandboxField zoom={zoom} />
+            </div>
+          ) : null}
         </div>
       )}
     </div>

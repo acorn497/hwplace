@@ -13,6 +13,8 @@ import { CanvasModule } from './common/canvas/canvas.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ReplayModule } from './common/replay/replay.module';
 import { AdminModule } from './common/admin/admin.module';
+import { SandboxModule } from './common/sandbox/sandbox.module';
+import { TokenModule } from './common/token/token.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -66,6 +68,8 @@ import { APP_GUARD } from '@nestjs/core';
     CanvasModule,
     ReplayModule,
     AdminModule,
+    SandboxModule,
+    TokenModule,
   ],
   controllers: [
     AppController,

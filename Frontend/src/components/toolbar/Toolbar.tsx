@@ -80,7 +80,7 @@ export const Toolbar = () => {
   useEffect(() => clearTooltipTimer, []);
 
   return (
-    <div className="fixed flex flex-col items-center bottom-10 left-1/2 -translate-x-1/2">
+    <div className="fixed z-20 flex flex-col items-center bottom-10 left-1/2 -translate-x-1/2">
       <div className="relative flex items-center gap-2 bg-surface backdrop-blur-md px-2 py-1.5 rounded-2xl border border-border shadow-sm shadow-black/5 mt-4">
         {visibleTools.map((tool, index) => {
           const isActive = activeTool === tool.tool;

@@ -469,7 +469,7 @@ export const Intro = ({ onFinished }: IntroProps) => {
 
   return (
     <div
-      className={`w-screen h-screen flex flex-col justify-center items-center bg-app-bg transition-[opacity,transform] ease-out ${fadeOut ? "opacity-0 scale-[1.03]" : "opacity-100 scale-100"} absolute z-1 overflow-hidden`}
+      className={`w-screen h-screen flex flex-col justify-center items-center bg-app-bg transition-[opacity,transform] ease-out ${fadeOut ? "opacity-0 scale-[1.03]" : "opacity-100 scale-100"} absolute z-50 overflow-hidden`}
       style={{ transitionDuration: `${INTRO_EXIT_MS}ms` }}
     >
       {/* 배경 광원 - 테마 토큰을 쓰므로 라이트/다크 모두에서 자연스럽다 */}
